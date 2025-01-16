@@ -1,0 +1,23 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true, // Empêche l'utilisation implicite du type "any".
+    "strictNullChecks": true, // Oblige à vérifier les valeurs null et undefined.
+    "strictPropertyInitialization": true, // Vérifie que toutes les propriétés sont initialisées dans le constructeur.
+    "forceConsistentCasingInFileNames": true, // Évite les problèmes de casse dans les noms de fichiers.
+    "skipLibCheck": true, // Ignore les vérifications des fichiers des bibliothèques pour des performances améliorées.
+    "resolveJsonModule": true, // Permet d'importer des fichiers JSON comme des modules.
+    "jsx": "react-native", // Spécifique à React Native.
+    "moduleResolution": "node", // Résolution des modules pour Node.js.
+    "esModuleInterop": true, // Meilleure compatibilité avec les modules CommonJS.
+    "baseUrl": "./", // Base pour les chemins relatifs.
+    "paths": {
+      "@components/*": ["src/components/*"], // Alias pour les répertoires.
+      "@screens/*": ["src/screens/*"],
+      "@services/*": ["src/services/*"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx"], // Inclure tous les fichiers TypeScript.
+  "exclude": ["node_modules", "babel.config.js", "metro.config.js"] // Exclure les fichiers inutiles.
+}
