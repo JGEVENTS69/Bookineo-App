@@ -1,3 +1,4 @@
+// src/screens/MapScreen.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
@@ -7,13 +8,13 @@ import {
   Image,
   TouchableOpacity,
   Text,
-  Dimensions,
 } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { supabase } from 'src/services/supabase';
 import { LocateFixed } from 'lucide-react-native';
-import Carousel from 'react-native-reanimated-carousel';
+import BookBoxCarousel from '../components/BookBoxCarousel';
+import { getDistance } from 'geolib';
 
 interface BookBox {
   id: string;
@@ -34,6 +35,7 @@ const MapScreen = () => {
     longitudeDelta: number;
   } | null>(null);
   const [bookBoxes, setBookBoxes] = useState<BookBox[]>([]);
+  const [filteredBookBoxes, setFilteredBookBoxes] = useState<BookBox[]>([]);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(
     null
@@ -92,6 +94,13 @@ const MapScreen = () => {
       const { data, error } = await supabase.from('book_boxes').select('*');
       if (!error && data) {
         setBookBoxes(data);
+        const filtered = data.filter((box) =>
+          getDistance(
+            { latitude: location.coords.latitude, longitude: location.coords.longitude },
+            { latitude: box.latitude, longitude: box.longitude }
+          ) <= 10000
+        );
+        setFilteredBookBoxes(filtered);
       }
 
       setLoading(false);
@@ -135,24 +144,7 @@ const MapScreen = () => {
       <TouchableOpacity style={styles.recenterButton} onPress={recenterToUserLocation}>
         <LocateFixed size={30} color="black" />
       </TouchableOpacity>
-      <View style={styles.carouselContainer}>
-        <Carousel
-          width={Dimensions.get('window').width}
-          height={200}
-          autoPlay={false}
-          data={bookBoxes}
-          mode="parallax"
-          scrollAnimationDuration={1000}
-          renderItem={({ item }) => (
-            <View style={styles.carouselItem}>
-              <Image source={{ uri: item.photo_url }} style={styles.carouselImage} />
-              <View style={styles.carouselTextContainer}>
-                <Text style={styles.carouselTitle}>{item.name}</Text>
-              </View>
-            </View>
-          )}
-        />
-      </View>
+      <BookBoxCarousel bookBoxes={filteredBookBoxes} />
     </View>
   );
 };
@@ -195,39 +187,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-  },
-  carouselContainer: {
-    position: 'absolute',
-    bottom: 20,
-    width: '100%',
-    height: 200,
-  },
-  carouselItem: {
-    flex: 1,
-    backgroundColor: 'white',
-    borderRadius: 15,
-    marginHorizontal: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    overflow: 'hidden',
-  },
-  carouselImage: {
-    width: '100%',
-    height: '70%',
-    resizeMode: 'cover',
-  },
-  carouselTextContainer: {
-    padding: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  carouselTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
   },
 });
 
