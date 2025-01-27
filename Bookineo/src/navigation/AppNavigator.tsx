@@ -5,6 +5,7 @@ import RegisterScreen from '../screens/Auth/RegisterScreen';
 import UsernameScreen from '@screens/Auth/UsernameScreen';
 import TabNavigator from '../navigation/TabNavigator';
 
+
 const Stack = createNativeStackNavigator();
 
 const AppNavigator = () => {
@@ -13,11 +14,7 @@ const AppNavigator = () => {
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name='Username' component={UsernameScreen} />
-      {/* Remplace l'écran de la carte par la TabNavigator */}
-      <Stack.Screen
-        name="Main"
-        component={TabNavigator}
-      />
+      <Stack.Screen name="Main" component={TabNavigator} />
     </Stack.Navigator>
   );
 };

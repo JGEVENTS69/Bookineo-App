@@ -179,7 +179,7 @@ const MapScreen = ({ navigation }) => {
           <LocateFixed size={30} color="black" />
         </TouchableOpacity>
         {selectedBookBox && (
-          <View style={styles.bookBoxInfoContainer}>
+          <TouchableOpacity onPress={navigateToBoxInfo} style={styles.bookBoxInfoContainer}>
             <Image source={{ uri: selectedBookBox.photo_url }} style={styles.bookBoxImage} />
             <TouchableOpacity style={styles.closeButton} onPress={() => setSelectedBookBox(null)}>
               <X size={24} color="black" />
@@ -196,15 +196,20 @@ const MapScreen = ({ navigation }) => {
               </Text>
             </View>
             <View style={styles.bookBoxDetails}>
-              <Text style={styles.bookBoxName}>{selectedBookBox.name}</Text>
-              <View style={styles.creatorContainer}>
-                <User size={16} color="white" />
-                <Text style={styles.creatorText}>
-                  Ajouté par {selectedBookBox.creator_username || 'Utilisateur'}
-                </Text>
+              <View style={styles.textContainer}>
+                <Text style={styles.bookBoxName}>{selectedBookBox.name}</Text>
+                <View style={styles.creatorContainer}>
+                  <User size={16} color="white" />
+                  <Text style={styles.creatorText}>
+                    Ajouté par {selectedBookBox.creator_username || 'Utilisateur'}
+                  </Text>
+                </View>
               </View>
+              <TouchableOpacity style={styles.gpsButton} onPress={openGPSNavigation}>
+                <MapPin size={24} color="white" />
+              </TouchableOpacity>
             </View>
-          </View>
+          </TouchableOpacity>
         )}
       </View>
     </TouchableWithoutFeedback>
@@ -302,6 +307,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.6)',
     borderBottomLeftRadius: 15,
     borderBottomRightRadius: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  textContainer: {
+    flex: 1,
   },
   bookBoxName: {
     fontSize: 20,
@@ -319,24 +330,13 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     fontSize: 14,
   },
-  actionButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  gpsButton: {
     backgroundColor: 'rgba(255,255,255,0.2)',
-    padding: 10,
-    borderRadius: 10,
-    width: '48%',
+    borderRadius: 15,
+    width: 40,
+    height: 40,
     justifyContent: 'center',
-  },
-  actionButtonText: {
-    color: 'white',
-    marginLeft: 5,
-    fontWeight: 'bold',
+    alignItems: 'center',
   },
 });
 
