@@ -1,12 +1,12 @@
-// TabNavigator.tsx
-
-import React from 'react';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MapPin, Heart, User, Plus, NavigationOff } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
 import MapScreen from '../screens/MapScreen';
 import AddBoxScreen from '@screens/AddBoxScreen';
-import BoxInfoScreen from '@screens/BoxInfoScreen'; // Importer BoxInfoScreen
+import BoxInfoScreen from '@screens/BoxInfoScreen';
 import CustomTabBarButton from '../components/CustomTabBarButton';
 
 const Tab = createBottomTabNavigator();
@@ -30,22 +30,30 @@ const Visites = () => (
   </View>
 );
 
-// Stack Navigator pour la carte (incluant BoxInfoScreen)
-const MapStack = () => {
+const MapStack = ({ navigation }) => {
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('state', (e) => {
+      const routeName = e.data.state.routes[e.data.state.index]?.name;
+      if (routeName === 'MapScreen') {
+        navigation.setOptions({ tabBarLabel: 'Carte' });
+      } else if (routeName === 'BoxInfoScreen') {
+        navigation.setOptions({ tabBarLabel: 'Détails de la boîte' });
+      }
+    });
+    return unsubscribe;
+  }, [navigation]);
+
   return (
     <Stack.Navigator>
       <Stack.Screen
         name="MapScreen"
         component={MapScreen}
-        options={{ headerShown: false }}
+        options={{ title: 'Carte', headerShown: true }}
       />
       <Stack.Screen
         name="BoxInfoScreen"
         component={BoxInfoScreen}
-        options={{
-          title: 'Détails de la boîte',
-          headerShown: true, // Affiche le header natif ici si nécessaire
-        }}
+        options={{ title: 'Détails de la boîte', headerShown: true }}
       />
     </Stack.Navigator>
   );
@@ -77,7 +85,7 @@ const TabNavigator = () => {
         },
       })}
     >
-      <Tab.Screen name="Map" component={MapStack} options={{ title: 'Carte' }} />
+      <Tab.Screen name="Map" component={MapStack} options={{ headerShown: false }} />
       <Tab.Screen name="Favorites" component={FavoritesScreen} options={{ title: 'Favoris' }} />
       <Tab.Screen
         name="Add"
@@ -88,10 +96,16 @@ const TabNavigator = () => {
           tabBarButton: (props) => <CustomTabBarButton {...props} />,
         }}
       />
-      
-      
     </Tab.Navigator>
   );
 };
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});
 
 export default TabNavigator;

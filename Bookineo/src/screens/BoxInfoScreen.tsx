@@ -1,9 +1,7 @@
-// BoxInfoScreen.tsx
-
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, StyleSheet, ActivityIndicator, ScrollView, Button } from 'react-native';
+import { View, Text, Image, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, Share, Linking } from 'react-native';
 import { supabase } from 'src/services/supabase';
-import { User } from 'lucide-react-native';
+import { User, Share2, Map, ChevronLeft, ExternalLink } from 'lucide-react-native';
 
 interface BookBox {
   id: string;
@@ -13,10 +11,12 @@ interface BookBox {
   longitude: number;
   created_id: string;
   creator_username?: string;
+  description?: string;
+  books_count?: number;
 }
 
 const BoxInfoScreen = ({ route, navigation }) => {
-  const { boxId } = route.params; // Récupérer l'ID de la boîte depuis la navigation
+  const { boxId } = route.params;
   const [bookBox, setBookBox] = useState<BookBox | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -31,12 +31,26 @@ const BoxInfoScreen = ({ route, navigation }) => {
       if (!error && data) {
         setBookBox(data);
       }
-
       setLoading(false);
     };
 
     fetchBookBoxDetails();
   }, [boxId]);
+
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: `Découvrez cette boîte à livres: ${bookBox?.name} à ${bookBox?.latitude}, ${bookBox?.longitude}`,
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const openInMaps = () => {
+    const url = `https://www.google.com/maps/search/?api=1&query=${bookBox?.latitude},${bookBox?.longitude}`;
+    Linking.openURL(url);
+  };
 
   if (loading) {
     return (
@@ -48,41 +62,63 @@ const BoxInfoScreen = ({ route, navigation }) => {
 
   if (!bookBox) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text>Book box not found</Text>
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Boîte à livres introuvable</Text>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}>
+          <Text style={styles.backButtonText}>Retour</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Image source={{ uri: bookBox.photo_url }} style={styles.bookBoxImage} />
-      <View style={styles.detailsContainer}>
-        <Text style={styles.bookBoxName}>{bookBox.name}</Text>
-        <View style={styles.creatorContainer}>
-          <User size={16} color="black" />
-          <Text style={styles.creatorText}>
-            Ajouté par {bookBox.creator_username || 'Utilisateur'}
-          </Text>
-        </View>
-        <Text style={styles.locationText}>
-          Latitude: {bookBox.latitude}, Longitude: {bookBox.longitude}
-        </Text>
-      </View>
+    <View style={styles.mainContainer}>
       
-      {/* Bouton pour revenir à la carte (ou au TabNavigator principal) */}
-      <Button
-        title="Retour à la carte"
-        onPress={() => navigation.navigate('Main')} // Navigue vers 'Main', qui est ton TabNavigator
-      />
-    </ScrollView>
+      <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
+        <Image source={{ uri: bookBox.photo_url }} style={styles.bookBoxImage} />
+        
+        <View style={styles.contentContainer}>
+          <View style={styles.headerContainer}>
+            <Text style={styles.bookBoxName}>{bookBox.name}</Text>
+            <TouchableOpacity onPress={handleShare} style={styles.shareButton}>
+              <Share2 size={24} color="#0066CC" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{bookBox.books_count || 0}</Text>
+              <Text style={styles.statLabel}>Livres</Text>
+            </View>
+          </View>
+
+          <View style={styles.creatorContainer}>
+            <User size={20} color="#666" />
+            <Text style={styles.creatorText}>
+              Ajouté par {bookBox.creator_username || 'Utilisateur'}
+            </Text>
+          </View>
+
+          {bookBox.description && (
+            <Text style={styles.description}>{bookBox.description}</Text>
+          )}
+
+          <TouchableOpacity style={styles.mapButton} onPress={openInMaps}>
+            <Map size={20} color="#fff" />
+            <Text style={styles.mapButtonText}>Voir sur la carte</Text>
+            <ExternalLink size={16} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    padding: 20,
+  mainContainer: {
+    flex: 1,
     backgroundColor: '#fff',
   },
   loadingContainer: {
@@ -90,40 +126,105 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  bookBoxImage: {
-    width: '100%',
-    height: 300,
-    resizeMode: 'cover',
-    borderRadius: 15,
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 18,
+    color: '#666',
     marginBottom: 20,
   },
-  detailsContainer: {
-    padding: 15,
+  bookBoxImage: {
+    width: '100%',
+    height: 400,
+    resizeMode: 'cover',
+  },
+  backButtonOverlay: {
+    position: 'absolute',
+    top: 44,
+    left: 16,
+    zIndex: 10,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 20,
+    padding: 8,
+  },
+  contentContainer: {
+    padding: 20,
+    marginTop: -30,
     backgroundColor: '#fff',
-    borderRadius: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   bookBoxName: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    flex: 1,
+    marginRight: 10,
+  },
+  shareButton: {
+    padding: 8,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    padding: 15,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 15,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 10,
+    color: '#0066CC',
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
   },
   creatorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 20,
+    padding: 15,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 15,
   },
   creatorText: {
-    marginLeft: 5,
+    marginLeft: 10,
     fontSize: 16,
+    color: '#333',
   },
-  locationText: {
+  description: {
     fontSize: 16,
-    color: '#555',
+    lineHeight: 24,
+    color: '#444',
+    marginBottom: 20,
+  },
+  mapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0066CC',
+    padding: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  mapButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

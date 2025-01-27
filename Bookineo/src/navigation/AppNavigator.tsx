@@ -4,6 +4,7 @@ import LoginScreen from '../screens/Auth/LoginScreen';
 import RegisterScreen from '../screens/Auth/RegisterScreen';
 import UsernameScreen from '@screens/Auth/UsernameScreen';
 import TabNavigator from '../navigation/TabNavigator';
+import BoxInfoScreen from '@screens/BoxInfoScreen';
 
 
 const Stack = createNativeStackNavigator();
@@ -15,6 +16,7 @@ const AppNavigator = () => {
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name='Username' component={UsernameScreen} />
       <Stack.Screen name="Main" component={TabNavigator} />
+      <Stack.Screen name="BoxInfoScreen" component={BoxInfoScreen} />
     </Stack.Navigator>
   );
 };

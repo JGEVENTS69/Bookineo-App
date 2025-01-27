@@ -13,7 +13,7 @@ import {
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { supabase } from 'src/services/supabase';
-import { LocateFixed, Navigation, X, MapPin, Info, User } from 'lucide-react-native';
+import { LocateFixed, Navigation, MapPin, User, Clock, Star, X, HousePlus } from 'lucide-react-native';
 import { getDistance } from 'geolib';
 
 interface BookBox {
@@ -44,7 +44,6 @@ const MapScreen = ({ navigation }) => {
 
   const handleBookBoxPress = async (box: BookBox) => {
     if (mapRef.current) {
-      // Fetch creator's username if not already fetched
       if (!box.creator_username) {
         const { data, error } = await supabase
           .from('users')
@@ -179,66 +178,74 @@ const MapScreen = ({ navigation }) => {
           <LocateFixed size={30} color="black" />
         </TouchableOpacity>
         {selectedBookBox && (
-          <TouchableOpacity onPress={navigateToBoxInfo} style={styles.bookBoxInfoContainer}>
-            <Image source={{ uri: selectedBookBox.photo_url }} style={styles.bookBoxImage} />
-            <TouchableOpacity style={styles.closeButton} onPress={() => setSelectedBookBox(null)}>
-              <X size={24} color="black" />
-            </TouchableOpacity>
-            <View style={styles.distanceContainer}>
-              <Navigation size={20} color="black" />
-              <Text style={styles.distanceText}>
-                {userLocation
-                  ? `${getDistance(
-                      { latitude: userLocation.latitude, longitude: userLocation.longitude },
-                      { latitude: selectedBookBox.latitude, longitude: selectedBookBox.longitude }
-                    )} m`
-                  : 'N/A'}
-              </Text>
-            </View>
-            <View style={styles.bookBoxDetails}>
-              <View style={styles.textContainer}>
-                <Text style={styles.bookBoxName}>{selectedBookBox.name}</Text>
-                <View style={styles.creatorContainer}>
-                  <User size={16} color="white" />
-                  <Text style={styles.creatorText}>
-                    Ajouté par {selectedBookBox.creator_username || 'Utilisateur'}
-                  </Text>
-                </View>
-              </View>
-              <TouchableOpacity style={styles.gpsButton} onPress={openGPSNavigation}>
-                <MapPin size={24} color="white" />
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        )}
-      </View>
-    </TouchableWithoutFeedback>
+           <View style={styles.bookBoxInfoContainer}>
+           <View style={styles.headerContainer}>
+             <Text style={styles.title}>{selectedBookBox.name}</Text>
+             <TouchableOpacity style={styles.closeButton} onPress={() => setSelectedBookBox(null)}>
+               <X size={24} color="black" />
+             </TouchableOpacity>
+           </View>
+
+           {selectedBookBox.photo_url && (
+      <Image
+        source={{ uri: selectedBookBox.photo_url }}
+        style={styles.bookBoxImage}
+      />
+    )}
+           <View style={styles.statsContainer}>
+             <View style={styles.statItem}>
+               <MapPin size={24} color="#0891b2" />
+               <Text style={styles.statText}>
+                 {userLocation
+                   ? `${(getDistance(
+                       { latitude: userLocation.latitude, longitude: userLocation.longitude },
+                       { latitude: selectedBookBox.latitude, longitude: selectedBookBox.longitude }
+                     ) / 1000).toFixed(1)} km`
+                   : 'N/A'}
+               </Text>
+             </View>
+             
+             <View style={styles.statItem}>
+               <Clock size={24} color="#0891b2" />
+               <Text style={styles.statText}>5-10 min</Text>
+             </View>
+             
+             <View style={styles.statItem}>
+               <Star size={24} color="#0891b2" />
+               <Text style={styles.statText}>4.2 (33)</Text>
+             </View>
+           </View>
+
+           <View style={styles.tagsContainer}>
+           <View style={styles.tag}>
+  <HousePlus size={16} color="white" style={{ marginRight: 8 }} />
+  <Text style={styles.tagText}>
+    {selectedBookBox.creator_username || 'Utilisateur inconnu'}
+  </Text>
+</View>
+           </View>
+
+           <TouchableOpacity style={styles.navigateButton} onPress={openGPSNavigation}>
+             <Navigation size={24} color="white" />
+             <Text style={styles.navigateButtonText}>Y aller</Text>
+           </TouchableOpacity>
+         </View>
+       )}
+     </View>
+   </TouchableWithoutFeedback>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  map: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  map: { flex: 1 },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  markerContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 60,
-    height: 60,
-  },
-  markerImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'contain',
-  },
+  markerContainer: { alignItems: 'center', justifyContent: 'center', width: 60, height: 60 },
+  markerImage: { width: '100%', height: '100%', resizeMode: 'contain' },
   recenterButton: {
     position: 'absolute',
     top: 20,
@@ -251,92 +258,104 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
     elevation: 5,
   },
   bookBoxInfoContainer: {
     position: 'absolute',
-    bottom: 10,
-    left: 10,
-    right: 10,
-    borderRadius: 15,
+    bottom: 20,
+    left: 15,
+    right: 15,
+    backgroundColor: 'white',
+    borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 10,
+    padding: 16,
   },
-  bookBoxImage: {
-    width: '100%',
-    height: 250,
-    resizeMode: 'cover',
-    borderRadius: 15,
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: 'white',
-    borderRadius: 15,
-    width: 30,
-    height: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  distanceContainer: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 5,
-  },
-  distanceText: {
-    marginLeft: 5,
-    fontSize: 14,
-  },
-  bookBoxDetails: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 15,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    borderBottomLeftRadius: 15,
-    borderBottomRightRadius: 15,
+  
+  headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 16,
   },
-  textContainer: {
-    flex: 1,
-  },
-  bookBoxName: {
-    fontSize: 20,
+  
+  title: {
+    fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 10,
+    color: '#333',
   },
-  creatorContainer: {
+  
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  
+  statItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    gap: 8,
   },
-  creatorText: {
-    color: 'white',
-    marginLeft: 5,
-    fontSize: 14,
+  
+  statText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
   },
-  gpsButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 15,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
+  
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  
+  tag: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(58, 124, 106, 0.8)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  
+  tagText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+
+  bookBoxImage: {
+    width: '100%',
+    height: 150,
+    borderRadius: 12,
+    marginBottom: 16,
+    resizeMode: 'cover',
+  },
+  
+  navigateButton: {
+    backgroundColor: '#0891b2',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  
+  navigateButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  
+  closeButton: {
+    padding: 4,
   },
 });
 
