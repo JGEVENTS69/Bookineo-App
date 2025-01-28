@@ -85,7 +85,7 @@ const MapScreen = ({ navigation }) => {
 
   const openNavigationInfo = () => {
     if (selectedBookBox) {
-      navigation.navigate('BoxInfoScreen', { boxId: selectedBookBox.id });
+      navigation.navigate('BoxInfoScreen', { selectedBox: selectedBookBox });
     }
   };
 

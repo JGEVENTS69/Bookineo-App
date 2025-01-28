@@ -9,54 +9,30 @@ import {
   StyleSheet,
   Dimensions,
   Platform,
+  Animated,
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { BlurView } from 'expo-blur';
-import { 
-  Ionicons,
-  MaterialCommunityIcons,
-  FontAwesome5 
-} from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import MapView, { Marker } from 'react-native-maps';
+
+
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const BoxInfoScreen = ({ route, navigation }) => {
-  const { boxId } = route.params;
-  const [bookBox, setBookBox] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { selectedBox } = route.params; // Récupérer les données transmises depuis MapScreen
   const [isLiked, setIsLiked] = useState(false);
+  const headerImageScale = new Animated.Value(1);
 
-  useEffect(() => {
-    const fetchBookBoxDetails = async () => {
-      // Simulation pour l'exemple
-      setBookBox({
-        name: "Boîte à Livres du Parc",
-        photo_url: "https://picsum.photos/800/400",
-        description: "Une belle boîte à livres située dans un endroit calme et verdoyant. Parfait pour les amateurs de lecture qui souhaitent découvrir de nouveaux livres ou partager leurs coups de cœur.",
-        latitude: 48.8566,
-        longitude: 2.3522,
-        creator_username: "Jean Dupont",
-        creator_avatar: "https://picsum.photos/40/40",
-        books_count: 42,
-        likes_count: 156,
-        created_at: "2024-01-15"
-      });
-      setLoading(false);
-    };
+  const handleLikePress = () => {
+    setIsLiked(!isLiked);
+    Animated.spring(headerImageScale, {
+      toValue: isLiked ? 1 : 1.1,
+      useNativeDriver: true,
+    }).start();
+  };
 
-    fetchBookBoxDetails();
-  }, [boxId]);
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0066FF" />
-      </View>
-    );
-  }
-
-  if (!bookBox) {
+  if (!selectedBox) {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>Boîte à livres introuvable</Text>
@@ -71,100 +47,129 @@ const BoxInfoScreen = ({ route, navigation }) => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="light" />
-      <ScrollView bounces={false}>
-        {/* Header Image */}
-        <View style={styles.headerContainer}>
-          <Image
-            source={{ uri: bookBox.photo_url }}
-            style={styles.headerImage}
-          />
-          <BlurView intensity={80} style={styles.headerOverlay}>
-            <View style={styles.headerContent}>
-              <View style={styles.bookCountBadge}>
-                <MaterialCommunityIcons name="book-open-page-variant" size={16} color="white" />
-                <Text style={styles.bookCountText}>{bookBox.books_count} livres</Text>
-              </View>
-              <Text style={styles.title}>{bookBox.name}</Text>
+    <ScrollView bounces={true}>
+      {/* Header Image */}
+      <View style={styles.headerContainer}>
+        <Animated.Image
+          source={{ uri: selectedBox.photo_url }}
+          style={[styles.headerImage, { transform: [{ scale: headerImageScale }] }]}
+        />
+        <LinearGradient
+          colors={['transparent', 'rgba(0, 0, 0, 0.8)']}
+          style={styles.headerOverlay}
+        >
+          <View style={styles.headerContent}>
+            <View style={styles.bookCountBadge}>
+              <MaterialCommunityIcons name="archive-marker" size={18} color="#3a7c6a" />
+              <Text style={styles.bookCountText}>
+                {selectedBox.books_count || 0} visites
+              </Text>
             </View>
-          </BlurView>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="chevron-back" size={24} color="white" />
+            <Text style={styles.title}>{selectedBox.name}</Text>
+          </View>
+        </LinearGradient>
+      </View>
+
+      {/* Content */}
+      <View style={styles.content}>
+        {/* User Info */}
+        <View style={styles.userInfoContainer}>
+          <View style={styles.userInfo}>
+            <Image
+              source={{ uri: selectedBox.creator_avatar || 'https://picsum.photos/40/40' }}
+              style={styles.avatar}
+            />
+            <View style={styles.userTexts}>
+              <Text style={styles.username}>
+                {selectedBox.creator_username || 'Utilisateur inconnu'}
+              </Text>
+              <Text style={styles.date}>
+                Ajoutée le {new Date(selectedBox.created_at).toLocaleDateString()}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleLikePress}
+            >
+              <Ionicons
+                name={isLiked ? "heart" : "heart-outline"}
+                size={24}
+                color={isLiked ? "#FF4B4B" : "#666"}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButton}>
+              <Ionicons name="share-outline" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Description */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>À propos de cette boîte</Text>
+          <Text style={styles.description}>
+            {selectedBox.description || "Aucune description disponible."}
+          </Text>
+        </View>
+
+        {/* Location Preview */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Emplacement</Text>
+          <View style={styles.mapPreview}>
+            <MapView
+              style={styles.map}
+              initialRegion={{
+                latitude: selectedBox.latitude,
+                longitude: selectedBox.longitude,
+                latitudeDelta: 0.01, // Niveau de zoom
+                longitudeDelta: 0.01, // Niveau de zoom
+              }}
+              scrollEnabled={true} // Désactive le déplacement de la carte
+              zoomEnabled={true} // Désactive le zoom
+              rotateEnabled={true} // Désactive la rotation
+            >
+              <Marker
+                coordinate={{
+                  latitude: selectedBox.latitude,
+                  longitude: selectedBox.longitude,
+                }}
+                title={selectedBox.name}
+                description="Boîte à livres"
+              >
+                <View style={styles.markerContainer}>
+                  <Image
+                    source={require('../assets/icons/book-marker.png')}
+                    style={styles.markerImage}
+                  />
+                </View>
+              </Marker>
+            
+            </MapView>
+          </View>
+        </View>
+
+        {/* Action Buttons */}
+        <View style={styles.buttonGroup}>
+          <TouchableOpacity style={styles.primaryButton}>
+            <Ionicons name="navigate" size={20} color="white" />
+            <Text style={styles.primaryButtonText}>S'y rendre</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.secondaryButton}>
+            <Ionicons name="camera" size={20} color="#3a7c6a" />
+            <Text style={styles.secondaryButtonText}>Marqué comme visité</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Content */}
-        <View style={styles.content}>
-          {/* User Info */}
-          <View style={styles.userInfoContainer}>
-            <View style={styles.userInfo}>
-              <Image
-                source={{ uri: bookBox.creator_avatar }}
-                style={styles.avatar}
-              />
-              <View style={styles.userTexts}>
-                <Text style={styles.username}>{bookBox.creator_username}</Text>
-                <Text style={styles.date}>
-                  Créé le {new Date(bookBox.created_at).toLocaleDateString()}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => setIsLiked(!isLiked)}
-              >
-                <Ionicons
-                  name={isLiked ? "heart" : "heart-outline"}
-                  size={24}
-                  color={isLiked ? "#FF4B4B" : "#666"}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton}>
-                <Ionicons name="share-outline" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Description */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>À propos de cette boîte</Text>
-            <Text style={styles.description}>{bookBox.description}</Text>
-          </View>
-
-          {/* Location Preview */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Emplacement</Text>
-            <View style={styles.mapPreview}>
-              <FontAwesome5 name="map-marked-alt" size={32} color="#666" />
-            </View>
-          </View>
-
-          {/* Action Buttons */}
-          <View style={styles.buttonGroup}>
-            <TouchableOpacity style={styles.primaryButton}>
-              <Ionicons name="navigate" size={20} color="white" />
-              <Text style={styles.primaryButtonText}>Itinéraire</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryButton}>
-              <Ionicons name="camera" size={20} color="#0066FF" />
-              <Text style={styles.secondaryButtonText}>Ajouter une photo</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: 'white',
+    paddingHorizontal: 10, 
   },
   loadingContainer: {
     flex: 1,
@@ -188,7 +193,7 @@ const styles = StyleSheet.create({
   errorButton: {
     paddingVertical: 12,
     paddingHorizontal: 24,
-    backgroundColor: '#0066FF',
+    backgroundColor: '#6C5CE7',
     borderRadius: 12,
   },
   errorButtonText: {
@@ -199,6 +204,7 @@ const styles = StyleSheet.create({
   headerContainer: {
     height: SCREEN_HEIGHT * 0.6,
     width: SCREEN_WIDTH,
+    overflow: 'hidden',
   },
   headerImage: {
     width: '100%',
@@ -213,12 +219,12 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   headerContent: {
-    gap: 12,
+    gap: 10,
   },
   bookCountBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 102, 255, 0.8)',
+    backgroundColor: 'rgba(245, 245, 245, 1)',
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 20,
@@ -226,7 +232,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   bookCountText: {
-    color: 'white',
+    color: '#3a7c6a',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -234,17 +240,6 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     color: 'white',
-  },
-  backButton: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 40,
-    left: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   content: {
     flex: 1,
@@ -317,16 +312,17 @@ const styles = StyleSheet.create({
   },
   buttonGroup: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
     marginBottom: 32,
+    paddingHorizontal: 20,
   },
   primaryButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0066FF',
+    backgroundColor: '#3a7c6a',
     paddingVertical: 16,
+    paddingHorizontal: 20,
     borderRadius: 16,
     gap: 8,
   },
@@ -336,20 +332,35 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   secondaryButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F5F5F5',
     paddingVertical: 16,
+    paddingHorizontal: 16,
     borderRadius: 16,
     gap: 8,
+    maxWidth: '100%',
   },
   secondaryButtonText: {
-    color: '#0066FF',
+    color: '#6C5CE7',
     fontSize: 16,
     fontWeight: '600',
   },
+  map: {
+    width: '100%',
+    height: '100%',
+  },
+  markerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  markerImage: {
+    width: 50, // Ajustez la taille selon vos besoins
+    height: 50, // Ajustez la taille selon vos besoins
+    resizeMode: 'contain', // Pour s'assurer que l'image conserve ses proportions
+  },
+  
 });
 
 export default BoxInfoScreen;
