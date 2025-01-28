@@ -13,7 +13,7 @@ import {
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { supabase } from 'src/services/supabase';
-import { LocateFixed, Navigation, MapPin, User, Clock, Star, X, HousePlus } from 'lucide-react-native';
+import { LocateFixed, Navigation, MapPin, User, Clock, Star, X, HousePlus, MapPinned, Info } from 'lucide-react-native';
 import { getDistance } from 'geolib';
 
 interface BookBox {
@@ -83,15 +83,7 @@ const MapScreen = ({ navigation }) => {
     }
   };
 
-  const openGPSNavigation = () => {
-    if (selectedBookBox) {
-      const { latitude, longitude } = selectedBookBox;
-      const url = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
-      Linking.openURL(url);
-    }
-  };
-
-  const navigateToBoxInfo = () => {
+  const openNavigationInfo = () => {
     if (selectedBookBox) {
       navigation.navigate('BoxInfoScreen', { boxId: selectedBookBox.id });
     }
@@ -178,61 +170,61 @@ const MapScreen = ({ navigation }) => {
           <LocateFixed size={30} color="black" />
         </TouchableOpacity>
         {selectedBookBox && (
-           <View style={styles.bookBoxInfoContainer}>
-           <View style={styles.headerContainer}>
-             <Text style={styles.title}>{selectedBookBox.name}</Text>
-             <TouchableOpacity style={styles.closeButton} onPress={() => setSelectedBookBox(null)}>
-               <X size={24} color="black" />
-             </TouchableOpacity>
-           </View>
+          <View style={styles.bookBoxInfoContainer}>
+            <View style={styles.headerContainer}>
+              <Text style={styles.title}>{selectedBookBox.name}</Text>
+              <TouchableOpacity style={styles.closeButton} onPress={() => setSelectedBookBox(null)}>
+                <X size={24} color="black" />
+              </TouchableOpacity>
+            </View>
 
-           {selectedBookBox.photo_url && (
-      <Image
-        source={{ uri: selectedBookBox.photo_url }}
-        style={styles.bookBoxImage}
-      />
-    )}
-           <View style={styles.statsContainer}>
-             <View style={styles.statItem}>
-               <MapPin size={24} color="#0891b2" />
-               <Text style={styles.statText}>
-                 {userLocation
-                   ? `${(getDistance(
-                       { latitude: userLocation.latitude, longitude: userLocation.longitude },
-                       { latitude: selectedBookBox.latitude, longitude: selectedBookBox.longitude }
-                     ) / 1000).toFixed(1)} km`
-                   : 'N/A'}
-               </Text>
-             </View>
-             
-             <View style={styles.statItem}>
-               <Clock size={24} color="#0891b2" />
-               <Text style={styles.statText}>5-10 min</Text>
-             </View>
-             
-             <View style={styles.statItem}>
-               <Star size={24} color="#0891b2" />
-               <Text style={styles.statText}>4.2 (33)</Text>
-             </View>
-           </View>
+            {selectedBookBox.photo_url && (
+              <Image
+                source={{ uri: selectedBookBox.photo_url }}
+                style={styles.bookBoxImage}
+              />
+            )}
+            <View style={styles.statsContainer}>
+              <View style={styles.statItem}>
+                <MapPin size={24} color="#3a7c6a" />
+                <Text style={styles.statText}>
+                  {userLocation
+                    ? `${(getDistance(
+                      { latitude: userLocation.latitude, longitude: userLocation.longitude },
+                      { latitude: selectedBookBox.latitude, longitude: selectedBookBox.longitude }
+                    ) / 1000).toFixed(1)} km`
+                    : 'N/A'}
+                </Text>
+              </View>
 
-           <View style={styles.tagsContainer}>
-           <View style={styles.tag}>
-  <HousePlus size={16} color="white" style={{ marginRight: 8 }} />
-  <Text style={styles.tagText}>
-    {selectedBookBox.creator_username || 'Utilisateur inconnu'}
-  </Text>
-</View>
-           </View>
+              <View style={styles.statItem}>
+                <MapPinned size={24} color="#3a7c6a" />
+                <Text style={styles.statText}>5-10 min</Text>
+              </View>
 
-           <TouchableOpacity style={styles.navigateButton} onPress={openGPSNavigation}>
-             <Navigation size={24} color="white" />
-             <Text style={styles.navigateButtonText}>Y aller</Text>
-           </TouchableOpacity>
-         </View>
-       )}
-     </View>
-   </TouchableWithoutFeedback>
+              <View style={styles.statItem}>
+                <Star size={24} color="#3a7c6a" />
+                <Text style={styles.statText}>4.2 (33)</Text>
+              </View>
+            </View>
+
+            <View style={styles.tagsContainer}>
+              <View style={styles.tag}>
+                <HousePlus size={16} color="white" style={{ marginRight: 8 }} />
+                <Text style={styles.tagText}>
+                  Ajouté par {selectedBookBox.creator_username || 'Utilisateur inconnu'}
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.navigateButton} onPress={openNavigationInfo}>
+              <Info size={24} color="white" />
+              <Text style={styles.navigateButtonText}>Détails de la boîte</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    </TouchableWithoutFeedback>
   );
 };
 
@@ -276,54 +268,54 @@ const styles = StyleSheet.create({
     elevation: 10,
     padding: 16,
   },
-  
+
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 10,
   },
-  
+
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
   },
-  
+
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 16,
   },
-  
+
   statItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  
+
   statText: {
     fontSize: 16,
     color: '#333',
     fontWeight: '500',
   },
-  
+
   tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
     marginBottom: 16,
   },
-  
+
   tag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(58, 124, 106, 0.8)',
+    backgroundColor: 'rgba(124, 124, 124, 0.57)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
   },
-  
+
   tagText: {
     color: 'white',
     fontSize: 14,
@@ -337,9 +329,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     resizeMode: 'cover',
   },
-  
+
   navigateButton: {
-    backgroundColor: '#0891b2',
+    backgroundColor: '#3a7c6a',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -347,13 +339,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 8,
   },
-  
+
   navigateButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
   },
-  
+
   closeButton: {
     padding: 4,
   },
