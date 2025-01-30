@@ -5,24 +5,81 @@ import {
   Image,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   StyleSheet,
   Dimensions,
   Platform,
   Animated,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
-
-
+import { supabase } from 'src/services/supabase'; // Importe Supabase
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const BoxInfoScreen = ({ route, navigation }) => {
-  const { selectedBox } = route.params; // Récupérer les données transmises depuis MapScreen
+  const { selectedBox } = route.params;
   const [isLiked, setIsLiked] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [rating, setRating] = useState(0);
   const headerImageScale = new Animated.Value(1);
+
+  const fetchComments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('box_visits')
+        .select('*')
+        .eq('box_id', selectedBox.id);
+
+      if (error) {
+        throw error;
+      }
+
+      setComments(data || []);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des commentaires:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchComments();
+  }, [selectedBox.id]);
+
+  const handleSubmitComment = async () => {
+    try {
+      const { data: user, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        console.error('Utilisateur non connecté');
+        return;
+      }
+      
+      const { data, error } = await supabase
+        .from('box_visits')
+        .insert([
+          {
+            box_id: selectedBox.id,
+            comment: newComment,
+            rating: rating,
+            visitor_id: user.user.id,
+          },
+        ]);
+  
+      if (error) {
+        throw error;
+      }
+  
+      await fetchComments();
+      setIsModalVisible(false);
+      setNewComment('');
+      setRating(0);
+    } catch (error) {
+      console.error('Erreur lors de la soumission du commentaire:', error);
+    }
+  };
 
   const handleLikePress = () => {
     setIsLiked(!isLiked);
@@ -122,12 +179,12 @@ const BoxInfoScreen = ({ route, navigation }) => {
               initialRegion={{
                 latitude: selectedBox.latitude,
                 longitude: selectedBox.longitude,
-                latitudeDelta: 0.01, // Niveau de zoom
-                longitudeDelta: 0.01, // Niveau de zoom
+                latitudeDelta: 0.01,
+                longitudeDelta: 0.01,
               }}
-              scrollEnabled={true} // Désactive le déplacement de la carte
-              zoomEnabled={true} // Désactive le zoom
-              rotateEnabled={true} // Désactive la rotation
+              scrollEnabled={true}
+              zoomEnabled={true}
+              rotateEnabled={true}
             >
               <Marker
                 coordinate={{
@@ -144,7 +201,6 @@ const BoxInfoScreen = ({ route, navigation }) => {
                   />
                 </View>
               </Marker>
-            
             </MapView>
           </View>
         </View>
@@ -155,12 +211,84 @@ const BoxInfoScreen = ({ route, navigation }) => {
             <Ionicons name="navigate" size={20} color="white" />
             <Text style={styles.primaryButtonText}>S'y rendre</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryButton}>
-            <Ionicons name="camera" size={20} color="#3a7c6a" />
-            <Text style={styles.secondaryButtonText}>Marqué comme visité</Text>
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => setIsModalVisible(true)}
+          >
+            <MaterialCommunityIcons name="archive-marker" size={20} color="#3a7c6a" />
+            <Text style={styles.secondaryButtonText} numberOfLines={1} ellipsizeMode="tail">
+              Marqué comme visité
+            </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Comment Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Commentaires</Text>
+          {comments.length > 0 ? (
+            comments.map((comment, index) => (
+              <View key={index} style={styles.commentCard}>
+                <Text style={styles.commentText}>{comment.comment || "J'ai visité cette boîte à livres."}</Text>
+                <View style={styles.ratingContainer}>
+                  {[...Array(comment.rating)].map((_, i) => (
+                    <Ionicons key={i} name="star" size={16} color="#FFD700" />
+                  ))}
+                </View>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.noCommentsText}>Aucun commentaire pour le moment.</Text>
+          )}
+        </View>
       </View>
+
+      {/* Modal for Adding Comment */}
+      <Modal
+  visible={isModalVisible}
+  animationType="fade"
+  transparent={true}
+  onRequestClose={() => setIsModalVisible(false)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalContainer}>
+      <Text style={styles.modalTitle}>Noter cette boîte à livres</Text>
+      <View style={styles.ratingContainer}>
+        {[...Array(5)].map((_, i) => (
+          <TouchableOpacity key={i} onPress={() => setRating(i + 1)}>
+            <Ionicons
+              name={i < rating ? "star" : "star-outline"}
+              size={32}
+              color="#FFD700"
+            />
+          </TouchableOpacity>
+        ))}
+      </View>
+      <Text style={styles.commentLabel}>Commentaire (optionnel)</Text>
+      <TextInput
+        style={styles.commentInput}
+        placeholder="Partagez votre expérience..."
+        placeholderTextColor="#999"
+        value={newComment}
+        onChangeText={setNewComment}
+        multiline
+      />
+      <View style={styles.modalButtons}>
+        <TouchableOpacity
+          style={styles.cancelButton}
+          onPress={() => setIsModalVisible(false)}
+        >
+          <Text style={styles.cancelButtonText}>Annuler</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.saveButton}
+          onPress={handleSubmitComment}
+        >
+          <Text style={styles.saveButtonText}>Enregistrer</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+</Modal>
     </ScrollView>
   );
 };
@@ -169,7 +297,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'white',
-    paddingHorizontal: 10, 
+    paddingHorizontal: 10,
   },
   loadingContainer: {
     flex: 1,
@@ -311,12 +439,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonGroup: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: 10,
     marginBottom: 32,
-    paddingHorizontal: 20,
   },
   primaryButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -332,6 +460,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   secondaryButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -340,12 +469,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 16,
     gap: 8,
-    maxWidth: '100%',
   },
   secondaryButtonText: {
-    color: '#6C5CE7',
+    color: '#3a7c6a',
     fontSize: 16,
     fontWeight: '600',
+    flexShrink: 1,
   },
   map: {
     width: '100%',
@@ -356,11 +485,105 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   markerImage: {
-    width: 50, // Ajustez la taille selon vos besoins
-    height: 50, // Ajustez la taille selon vos besoins
-    resizeMode: 'contain', // Pour s'assurer que l'image conserve ses proportions
+    width: 50,
+    height: 50,
+    resizeMode: 'contain',
   },
-  
+  commentCard: {
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  commentText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  noCommentsText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContainer: {
+    width: '90%',
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  commentLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  commentInput: {
+    height: 100,
+    borderColor: '#CCC',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    fontSize: 14,
+    color: '#333',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  cancelButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: '#3a7c6a',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  saveButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
 
 export default BoxInfoScreen;
