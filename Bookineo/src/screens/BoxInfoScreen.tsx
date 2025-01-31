@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Dimensions,
   Platform,
+  Linking,
   Animated,
   Modal,
   TextInput,
@@ -27,6 +28,15 @@ const BoxInfoScreen = ({ route, navigation }) => {
   const [newComment, setNewComment] = useState('');
   const [rating, setRating] = useState(0);
   const headerImageScale = new Animated.Value(1);
+
+  const handleNavigate = () => {
+    const url = Platform.select({
+      ios: `maps://app?daddr=${selectedBox.latitude},${selectedBox.longitude}`,
+      android: `google.navigation:q=${selectedBox.latitude},${selectedBox.longitude}`,
+    });
+  
+    Linking.openURL(url).catch(err => console.error('Erreur lors de l\'ouverture de la carte:', err));
+  };
 
   const fetchComments = async () => {
     try {
@@ -207,7 +217,7 @@ const BoxInfoScreen = ({ route, navigation }) => {
 
         {/* Action Buttons */}
         <View style={styles.buttonGroup}>
-          <TouchableOpacity style={styles.primaryButton}>
+          <TouchableOpacity style={styles.primaryButton} onPress={handleNavigate}>
             <Ionicons name="navigate" size={20} color="white" />
             <Text style={styles.primaryButtonText}>S'y rendre</Text>
           </TouchableOpacity>
