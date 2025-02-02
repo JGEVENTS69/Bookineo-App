@@ -34,7 +34,7 @@ const BoxInfoScreen = ({ route, navigation }) => {
       ios: `maps://app?daddr=${selectedBox.latitude},${selectedBox.longitude}`,
       android: `google.navigation:q=${selectedBox.latitude},${selectedBox.longitude}`,
     });
-  
+
     Linking.openURL(url).catch(err => console.error('Erreur lors de l\'ouverture de la carte:', err));
   };
 
@@ -42,7 +42,7 @@ const BoxInfoScreen = ({ route, navigation }) => {
     try {
       const { data, error } = await supabase
         .from('box_visits')
-        .select('*')
+        .select('*, visitor_id:visitor_id(id, username, avatar_url)')
         .eq('box_id', selectedBox.id);
 
       if (error) {
@@ -66,7 +66,7 @@ const BoxInfoScreen = ({ route, navigation }) => {
         console.error('Utilisateur non connecté');
         return;
       }
-      
+
       const { data, error } = await supabase
         .from('box_visits')
         .insert([
@@ -77,11 +77,11 @@ const BoxInfoScreen = ({ route, navigation }) => {
             visitor_id: user.user.id,
           },
         ]);
-  
+
       if (error) {
         throw error;
       }
-  
+
       await fetchComments();
       setIsModalVisible(false);
       setNewComment('');
@@ -98,6 +98,14 @@ const BoxInfoScreen = ({ route, navigation }) => {
       useNativeDriver: true,
     }).start();
   };
+
+  const calculateAverageRating = () => {
+    if (comments.length === 0) return 0;
+    const totalRating = comments.reduce((sum, comment) => sum + comment.rating, 0);
+    return (totalRating / comments.length).toFixed(1);
+  };
+
+  const commentCount = comments.length;
 
   if (!selectedBox) {
     return (
@@ -129,7 +137,7 @@ const BoxInfoScreen = ({ route, navigation }) => {
             <View style={styles.bookCountBadge}>
               <MaterialCommunityIcons name="archive-marker" size={18} color="#3a7c6a" />
               <Text style={styles.bookCountText}>
-                {selectedBox.books_count || 0} visites
+              {commentCount} visites
               </Text>
             </View>
             <Text style={styles.title}>{selectedBox.name}</Text>
@@ -182,7 +190,7 @@ const BoxInfoScreen = ({ route, navigation }) => {
 
         {/* Location Preview */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Emplacement</Text>
+          <Text style={styles.sectionTitle}>Emplacement de la boîte</Text>
           <View style={styles.mapPreview}>
             <MapView
               style={styles.map}
@@ -234,71 +242,93 @@ const BoxInfoScreen = ({ route, navigation }) => {
 
         {/* Comment Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Commentaires</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Visites et commentaires</Text>
+            <View style={styles.ratingContainer}>
+              <Ionicons name="star" size={18} color="#FFD700"/>
+              <Text style={styles.ratingText}>{calculateAverageRating()}</Text>
+              <Text style={styles.bookCountText}>
+              ({commentCount})
+              </Text>
+            </View>
+          </View>
           {comments.length > 0 ? (
             comments.map((comment, index) => (
               <View key={index} style={styles.commentCard}>
-                <Text style={styles.commentText}>{comment.comment || "J'ai visité cette boîte à livres."}</Text>
-                <View style={styles.ratingContainer}>
-                  {[...Array(comment.rating)].map((_, i) => (
-                    <Ionicons key={i} name="star" size={16} color="#FFD700" />
-                  ))}
+                <View style={styles.commentHeader}>
+                  <Image
+                    source={{ uri: comment.visitor_id.avatar_url || 'https://picsum.photos/40/40' }}
+                    style={styles.commentAvatar}
+                  />
+                  <View style={styles.commentHeaderTexts}>
+                    <Text style={styles.commentUsername}>{comment.visitor_id?.username || 'Utilisateur inconnu'}</Text>
+                    <View style={styles.commentDateContainer}>
+                      <Ionicons name="calendar" size={14} color="#666" />
+                      <Text style={styles.commentDate}>{new Date(comment.created_at).toLocaleDateString()}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.ratingContainer}>
+                    {[...Array(comment.rating)].map((_, i) => (
+                      <Ionicons key={i} name="star" size={20} color="#FFD700" />
+                    ))}
+                  </View>
                 </View>
+                <Text style={styles.commentText}>{comment.comment || "J'ai visité cette boîte à livres."}</Text>
               </View>
             ))
           ) : (
-            <Text style={styles.noCommentsText}>Aucun commentaire pour le moment.</Text>
+            <Text style={styles.noCommentsText}>Aucune visite et commentaire pour le moment.</Text>
           )}
         </View>
       </View>
 
       {/* Modal for Adding Comment */}
       <Modal
-  visible={isModalVisible}
-  animationType="fade"
-  transparent={true}
-  onRequestClose={() => setIsModalVisible(false)}
->
-  <View style={styles.modalOverlay}>
-    <View style={styles.modalContainer}>
-      <Text style={styles.modalTitle}>Noter cette boîte à livres</Text>
-      <View style={styles.ratingContainer}>
-        {[...Array(5)].map((_, i) => (
-          <TouchableOpacity key={i} onPress={() => setRating(i + 1)}>
-            <Ionicons
-              name={i < rating ? "star" : "star-outline"}
-              size={32}
-              color="#FFD700"
+        visible={isModalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setIsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Noter cette boîte à livres</Text>
+            <View style={styles.ratingContainer}>
+              {[...Array(5)].map((_, i) => (
+                <TouchableOpacity key={i} onPress={() => setRating(i + 1)}>
+                  <Ionicons
+                    name={i < rating ? "star" : "star-outline"}
+                    size={32}
+                    color="#FFD700"
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.commentLabel}>Commentaire (optionnel)</Text>
+            <TextInput
+              style={styles.commentInput}
+              placeholder="Partagez votre expérience..."
+              placeholderTextColor="#999"
+              value={newComment}
+              onChangeText={setNewComment}
+              multiline
             />
-          </TouchableOpacity>
-        ))}
-      </View>
-      <Text style={styles.commentLabel}>Commentaire (optionnel)</Text>
-      <TextInput
-        style={styles.commentInput}
-        placeholder="Partagez votre expérience..."
-        placeholderTextColor="#999"
-        value={newComment}
-        onChangeText={setNewComment}
-        multiline
-      />
-      <View style={styles.modalButtons}>
-        <TouchableOpacity
-          style={styles.cancelButton}
-          onPress={() => setIsModalVisible(false)}
-        >
-          <Text style={styles.cancelButtonText}>Annuler</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.saveButton}
-          onPress={handleSubmitComment}
-        >
-          <Text style={styles.saveButtonText}>Enregistrer</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </View>
-</Modal>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setIsModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleSubmitComment}
+              >
+                <Text style={styles.saveButtonText}>Enregistrer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -510,6 +540,35 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  commentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  commentAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 8,
+  },
+  commentHeaderTexts: {
+    flex: 1,
+  },
+  commentUsername: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  commentDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  commentDate: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 4,
+  },
   commentText: {
     fontSize: 14,
     color: '#666',
@@ -543,11 +602,6 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 16,
     textAlign: 'center',
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 16,
   },
   commentLabel: {
     fontSize: 14,
@@ -592,6 +646,22 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: 'white',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ratingText: {
+    color: 'black',
+    fontSize: 14,
     fontWeight: '600',
   },
 });
