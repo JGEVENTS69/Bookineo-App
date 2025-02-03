@@ -3,7 +3,8 @@ import { NavigationContainer } from '@react-navigation/native'; // Uniquement ic
 import AppNavigator from './src/navigation/AppNavigator';
 import 'react-native-gesture-handler';
 import { configureReanimatedLogger } from 'react-native-reanimated';
-
+import Toast from 'react-native-toast-message';
+import { toastConfig } from './src/services/toastConfig';
 
 
 
@@ -18,6 +19,7 @@ export default function App() {
   return (
       <NavigationContainer>
         <AppNavigator />
+        <Toast config={toastConfig} />
       </NavigationContainer>
   );
 }

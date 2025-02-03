@@ -3,6 +3,7 @@ import {
   View,
   Text,
   Image,
+  Pressable,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
@@ -18,6 +19,8 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
 import { supabase } from 'src/services/supabase'; // Importe Supabase
 import Toast from 'react-native-toast-message';
+
+
 
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -184,9 +187,9 @@ const BoxInfoScreen = ({ route, navigation }) => {
 
         setIsLiked(true);
         Toast.show({
-          type: 'success',
-          text1: 'Ajouté aux favoris',
-          text2: 'Cette boîte a été ajoutée à vos favoris.',
+          type: 'success', // Toast de succès
+          text1: 'Favoris',
+          text2: 'Boîte ajoutée aux favoris !',
         });
       } else {
         // Si la boîte est déjà dans les favoris, on la retire
@@ -202,11 +205,6 @@ const BoxInfoScreen = ({ route, navigation }) => {
         }
 
         setIsLiked(false);
-        Toast.show({
-          type: 'info',
-          text1: 'Retiré des favoris',
-          text2: 'Cette boîte a été retirée de vos favoris.',
-        });
       }
     } catch (error) {
       console.error('Erreur lors de l\'action sur le bouton Like:', error);
