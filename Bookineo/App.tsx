@@ -4,6 +4,9 @@ import AppNavigator from './src/navigation/AppNavigator';
 import 'react-native-gesture-handler';
 import { configureReanimatedLogger } from 'react-native-reanimated';
 
+
+
+
 configureReanimatedLogger({
   // Vous pouvez ajuster ces paramètres selon vos besoins
   logLevel: 'error', // ou 'warn' pour réduire la verbosité
@@ -13,8 +16,8 @@ configureReanimatedLogger({
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <AppNavigator />
-    </NavigationContainer>
+      <NavigationContainer>
+        <AppNavigator />
+      </NavigationContainer>
   );
 }

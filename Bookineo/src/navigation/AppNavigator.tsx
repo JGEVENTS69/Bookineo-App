@@ -18,6 +18,7 @@ const AppNavigator = () => {
       <Stack.Screen name="Main" component={TabNavigator} />
       <Stack.Screen name="BoxInfoScreen" component={BoxInfoScreen} />
     </Stack.Navigator>
+
   );
 };
 

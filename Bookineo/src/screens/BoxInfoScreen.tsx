@@ -17,6 +17,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
 import { supabase } from 'src/services/supabase'; // Importe Supabase
+import Toast from 'react-native-toast-message';
+
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -28,6 +30,60 @@ const BoxInfoScreen = ({ route, navigation }) => {
   const [newComment, setNewComment] = useState('');
   const [rating, setRating] = useState(0);
   const headerImageScale = new Animated.Value(1);
+  const [avatarUrl, setAvatarUrl] = useState(null);
+
+  useEffect(() => {
+    const loadAvatar = async () => {
+      const avatar = await fetchUserAvatar(selectedBox.created_id);  // Utilisation de created_id
+      setAvatarUrl(avatar);
+    };
+  
+    loadAvatar();
+  }, []);
+  
+  const fetchUserAvatar = async (createdId) => {
+    const { data, error } = await supabase
+      .from('users')  // Nom de la table des utilisateurs
+      .select('avatar_url') // Sélectionne uniquement l'avatar
+      .eq('id', createdId)  // Filtre avec l'ID utilisateur stocké dans created_id
+      .single();  // On attend un seul résultat
+  
+    if (error) {
+      console.error("Erreur lors de la récupération de l'avatar :", error);
+      return null; // Retourne null en cas d'erreur
+    }
+  
+    return data.avatar_url; // Retourne l'URL de l'avatar
+  };
+
+  useEffect(() => {
+    const checkIfLiked = async () => {
+      const { data: user, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        console.error('Utilisateur non connecté');
+        return;
+      }
+
+      try {
+        const { data: favoriteData, error: favoriteError } = await supabase
+          .from('favorites')
+          .select('*')
+          .eq('user_id', user.user.id)
+          .eq('box_id', selectedBox.id);
+
+        if (favoriteError) {
+          console.error('Erreur de récupération des favoris:', favoriteError);
+          return;
+        }
+
+        setIsLiked(favoriteData.length > 0); // Mise à jour de l'état en fonction de la présence du favori
+      } catch (error) {
+        console.error('Erreur lors de la vérification des favoris:', error);
+      }
+    };
+
+    checkIfLiked();
+  }, [selectedBox.id]);
 
   const handleNavigate = () => {
     const url = Platform.select({
@@ -91,13 +147,72 @@ const BoxInfoScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleLikePress = () => {
-    setIsLiked(!isLiked);
-    Animated.spring(headerImageScale, {
-      toValue: isLiked ? 1 : 1.1,
-      useNativeDriver: true,
-    }).start();
+  const handleLikePress = async () => {
+    const { data: user, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error('Utilisateur non connecté');
+      return;
+    }
+
+    try {
+      const { data: favoriteData, error: favoriteError } = await supabase
+        .from('favorites')
+        .select('*')
+        .eq('user_id', user.user.id)
+        .eq('box_id', selectedBox.id);
+
+      if (favoriteError) {
+        console.error('Erreur lors de la récupération des favoris:', favoriteError);
+        return;
+      }
+
+      if (favoriteData.length === 0) {
+        // Si la boîte n'est pas dans les favoris, on l'ajoute
+        const { error: insertError } = await supabase
+          .from('favorites')
+          .insert([
+            {
+              user_id: user.user.id,
+              box_id: selectedBox.id,
+            },
+          ]);
+
+        if (insertError) {
+          console.error('Erreur lors de l\'ajout aux favoris:', insertError);
+          return;
+        }
+
+        setIsLiked(true);
+        Toast.show({
+          type: 'success',
+          text1: 'Ajouté aux favoris',
+          text2: 'Cette boîte a été ajoutée à vos favoris.',
+        });
+      } else {
+        // Si la boîte est déjà dans les favoris, on la retire
+        const { error: deleteError } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', user.user.id)
+          .eq('box_id', selectedBox.id);
+
+        if (deleteError) {
+          console.error('Erreur lors de la suppression du favori:', deleteError);
+          return;
+        }
+
+        setIsLiked(false);
+        Toast.show({
+          type: 'info',
+          text1: 'Retiré des favoris',
+          text2: 'Cette boîte a été retirée de vos favoris.',
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'action sur le bouton Like:', error);
+    }
   };
+  
 
   const calculateAverageRating = () => {
     if (comments.length === 0) return 0;
@@ -151,7 +266,7 @@ const BoxInfoScreen = ({ route, navigation }) => {
         <View style={styles.userInfoContainer}>
           <View style={styles.userInfo}>
             <Image
-              source={{ uri: selectedBox.creator_avatar || 'https://picsum.photos/40/40' }}
+              source={{ uri: avatarUrl || 'https://picsum.photos/40/40' }}
               style={styles.avatar}
             />
             <View style={styles.userTexts}>

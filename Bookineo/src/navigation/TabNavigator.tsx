@@ -8,6 +8,7 @@ import MapScreen from '../screens/MapScreen';
 import AddBoxScreen from '@screens/AddBoxScreen';
 import BoxInfoScreen from '@screens/BoxInfoScreen';
 import CustomTabBarButton from '../components/CustomTabBarButton';
+import FavorisScreen from '@screens/FavorisScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -86,7 +87,7 @@ const TabNavigator = () => {
       })}
     >
       <Tab.Screen name="Map" component={MapStack} options={{ headerShown: false }} />
-      <Tab.Screen name="Favorites" component={FavoritesScreen} options={{ title: 'Favoris' }} />
+      <Tab.Screen name="Favorites" component={FavorisScreen} options={{ title: 'Favoris' }} />
       <Tab.Screen
         name="Add"
         component={AddBoxScreen}
