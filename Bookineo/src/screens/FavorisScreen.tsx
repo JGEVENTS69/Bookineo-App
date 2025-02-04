@@ -3,6 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet, StatusBar } 
 import { supabase } from '../services/supabase';
 import { Heart, Trash2 } from 'lucide-react-native';
 import Animated, { FadeIn, FadeOut, Layout } from 'react-native-reanimated';
+import Toast from 'react-native-toast-message';
 
 const FavorisScreen = () => {
   const [favorites, setFavorites] = useState([]);
@@ -47,6 +48,11 @@ const FavorisScreen = () => {
     if (!error) {
       setFavorites(favorites.filter(fav => fav.id !== favoriteId));
     }
+    Toast.show({
+              type: 'error',
+              text1: 'Favoris',
+              text2: 'Boîte supprimée de vos favoris !',
+            });
   };
 
   useEffect(() => {

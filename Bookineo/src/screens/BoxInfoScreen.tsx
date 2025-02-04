@@ -205,6 +205,11 @@ const BoxInfoScreen = ({ route, navigation }) => {
         }
 
         setIsLiked(false);
+        Toast.show({
+          type: 'error',
+          text1: 'Favoris',
+          text2: 'Boîte supprimée de vos favoris !',
+        });
       }
     } catch (error) {
       console.error('Erreur lors de l\'action sur le bouton Like:', error);

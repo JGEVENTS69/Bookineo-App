@@ -5,6 +5,8 @@ import RegisterScreen from '../screens/Auth/RegisterScreen';
 import UsernameScreen from '@screens/Auth/UsernameScreen';
 import TabNavigator from '../navigation/TabNavigator';
 import BoxInfoScreen from '@screens/BoxInfoScreen';
+import EditProfile from '@screens/EditProfile';
+
 
 
 const Stack = createNativeStackNavigator();
@@ -17,6 +19,7 @@ const AppNavigator = () => {
       <Stack.Screen name='Username' component={UsernameScreen} />
       <Stack.Screen name="Main" component={TabNavigator} />
       <Stack.Screen name="BoxInfoScreen" component={BoxInfoScreen} />
+      <Stack.Screen name="EditProfile" component={EditProfile} />
     </Stack.Navigator>
 
   );

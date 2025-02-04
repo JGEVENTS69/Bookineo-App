@@ -9,21 +9,11 @@ import AddBoxScreen from '@screens/AddBoxScreen';
 import BoxInfoScreen from '@screens/BoxInfoScreen';
 import CustomTabBarButton from '../components/CustomTabBarButton';
 import FavorisScreen from '@screens/FavorisScreen';
+import ProfileScreen from '@screens/ProfileScreen';
+import EditProfile from '@screens/EditProfile';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
-
-const FavoritesScreen = () => (
-  <View style={styles.screen}>
-    <Text>Favoris</Text>
-  </View>
-);
-
-const ProfileScreen = () => (
-  <View style={styles.screen}>
-    <Text>Profil</Text>
-  </View>
-);
 
 const Visites = () => (
   <View style={styles.screen}>
@@ -60,6 +50,15 @@ const MapStack = ({ navigation }) => {
   );
 };
 
+const ProfileStack = () => {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen name="ProfileScreen" component={ProfileScreen} options={{ title: 'Profil' }} />
+      <Stack.Screen name="EditProfile" component={EditProfile} options={{ title: 'Modifier votre profil' }} />
+    </Stack.Navigator>
+  );
+};
+
 const TabNavigator = () => {
   return (
     <Tab.Navigator
@@ -69,7 +68,7 @@ const TabNavigator = () => {
             return <MapPin color={color} size={size} />;
           } else if (route.name === 'Favorites') {
             return <Heart color={color} size={size} />;
-          } else if (route.name === 'Profile') {
+          } else if (route.name === 'Profil') {
             return <User color={color} size={size} />;
           } else if (route.name === 'Visites') {
             return <NavigationOff color={color} size={size} />;
@@ -88,6 +87,7 @@ const TabNavigator = () => {
     >
       <Tab.Screen name="Map" component={MapStack} options={{ headerShown: false }} />
       <Tab.Screen name="Favorites" component={FavorisScreen} options={{ title: 'Favoris' }} />
+      <Tab.Screen name="Profil" component={ProfileStack} options={{ headerShown: false }} />
       <Tab.Screen
         name="Add"
         component={AddBoxScreen}

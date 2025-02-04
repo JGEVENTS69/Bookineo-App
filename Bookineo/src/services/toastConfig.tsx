@@ -43,9 +43,10 @@ const styles = StyleSheet.create({
       alignItems: 'center',
     },
     errorToast: {
-      backgroundColor: '#F44336',
+      backgroundColor: '#d8596e',
       padding: 16,
       borderRadius: 8,
+      marginTop: 20,
       flexDirection: 'row',
       alignItems: 'center',
     },
