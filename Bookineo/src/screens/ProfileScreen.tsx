@@ -1,140 +1,155 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   Image,
-  StyleSheet,
-  ActivityIndicator,
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
   Dimensions,
+  StyleSheet,
+  StatusBar,
+  Animated,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../services/supabase';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
+const HEADER_HEIGHT = 250;
 
-const ProfileScreen = () => {
+const ProfileScreen = ({ navigation }) => {
+  const [activeTab, setActiveTab] = useState('added');
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [booksAdded, setBooksAdded] = useState(0); // État pour le nombre de boîtes ajoutées
-  const navigation = useNavigation();
+  const scrollY = new Animated.Value(0);
 
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error) throw error;
-
-        console.log('User data:', user);
-
-        const { data, error: profileError } = await supabase
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase
           .from('users')
           .select('*')
           .eq('id', user.id)
           .single();
-
-        if (profileError) throw profileError;
-
-        console.log('Profile data:', data);
-
-        setUser({ ...user, ...data });
-
-        // Récupérer le nombre de boîtes ajoutées par l'utilisateur
-        const { count, error: booksError } = await supabase
-          .from('book_boxes')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-
-        if (booksError) throw booksError;
-
-        console.log('Books added count:', count);
-
-        setBooksAdded(count);
-      } catch (error) {
-        console.error('Error fetching user profile:', error);
-      } finally {
-        setLoading(false);
+        if (error) {
+          console.error(error);
+        } else {
+          setUser(data);
+        }
       }
     };
 
-    fetchUserProfile();
+    fetchUser();
   }, []);
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-      </View>
-    );
-  }
+  const headerHeight = scrollY.interpolate({
+    inputRange: [-30, HEADER_HEIGHT - 100],
+    outputRange: [HEADER_HEIGHT, 90],
+    extrapolate: 'clamp'
+  });
 
-  if (!user) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>User not found</Text>
-        <TouchableOpacity style={styles.button} onPress={() => navigation.goBack()}>
-          <Text style={styles.buttonText}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  const opacity = scrollY.interpolate({
+    inputRange: [0, HEADER_HEIGHT - 90],
+    outputRange: [1, 0],
+    extrapolate: 'clamp'
+  });
 
-  const StatItem = ({ label, value }) => (
-    <View style={styles.statItem}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
+  const renderBookBox = () => (
+    <TouchableOpacity style={styles.bookBox}>
+      <Image
+        source={{ uri: 'https://via.placeholder.com/80' }}
+        style={styles.bookBoxImage}
+      />
+      <View style={styles.bookBoxContent}>
+        <Text style={styles.bookBoxTitle}>Boîte à livres du Parc</Text>
+        <Text style={styles.bookBoxAddress}>123 rue des Fleurs, Paris</Text>
+        <View style={styles.statusContainer}>
+          <View style={styles.statusDot} />
+          <Text style={styles.statusText}>Disponible</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
   );
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Cover Image */}
+      
+      
+      {/* Header animé */}
+      <Animated.View style={[styles.header, { height: headerHeight }]}>
         <Image
-          source={{ uri: user.banner_url || 'https://via.placeholder.com/500x200' }}
+          source={{ uri: user?.banner_url || 'https://vjwctbtqyipqsnexjukq.supabase.co/storage/v1/object/public/banner//Banner_Empty.png' }}
           style={styles.coverImage}
         />
-
-        {/* Profile Header */}
-        <View style={styles.headerContainer}>
-          <TouchableOpacity style={styles.editButton} onPress={() => navigation.navigate('EditProfile')}>
-            <MaterialCommunityIcons name="cog" size={36} color="#9f9f9f" />
+        <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.iconButton}>
+            <Ionicons name="notifications-outline" size={24} color="#FFF" />
           </TouchableOpacity>
-          <Image
-            source={{ uri: user.avatar_url }}
-            style={styles.profilePicture}
-          />
-          <Text style={styles.username}>{user.username}</Text>
-          <Text style={styles.infoText}>{user.email}</Text>
-          <Text style={styles.infoDate}>
-            Membre depuis le {new Date(user.created_at).toLocaleDateString()}.
-          </Text>
+          <TouchableOpacity style={styles.iconButton}>
+            <Ionicons name="settings-outline" size={24} color="#FFF" />
+          </TouchableOpacity>
         </View>
+      </Animated.View>
 
-        {/* Stats Section */}
-        <View style={styles.statsContainer}>
-          <StatItem label="Boîtes à livres ajoutées" value={booksAdded} />
-          <View style={styles.statsDivider} />
-          <StatItem label="Boîtes à livres visitées" value="14.3k" />
-        </View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
+      >
+        <View style={styles.profileContainer}>
+          <View style={styles.avatarContainer}>
+            <Image
+              source={{ uri: user?.avatar_url || 'https://vjwctbtqyipqsnexjukq.supabase.co/storage/v1/object/public/avatars//Empty-PhotoProfile.png' }}
+              style={styles.avatar}
+            />
+          </View>
 
-        {/* Info Section */}
-        <View style={styles.infoSection}>
-          {user.phone && (
-            <View style={styles.infoItem}>
-              <Ionicons name="call" size={20} color="#333333" />
-              <Text style={styles.infoText}>{user.phone}</Text>
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>{user?.username}</Text>
+            <Text style={styles.userEmail}>{user?.email}</Text>
+          </View>
+
+          <View style={styles.userMetadata}>
+            <View style={styles.metadataItem}>
+              <Ionicons name="calendar-outline" size={18} color="#666" />
+              <Text style={styles.metadataText}>Membre depuis le {new Date(user?.created_at).toLocaleDateString()}. </Text>
             </View>
-          )}
-          {user.location && (
-            <View style={styles.infoItem}>
-              <Ionicons name="location" size={20} color="#333333" />
-              <Text style={styles.infoText}>{user.location}</Text>
+            <View style={styles.metadataItem}>
+              <Ionicons name="location-outline" size={18} color="#666" />
+              <Text style={styles.metadataText}>Paris, France</Text>
             </View>
-          )}
+          </View>
+
+          <View style={styles.stats}>
+            <TouchableOpacity
+              style={[styles.statItem, activeTab === 'added' && styles.activeStatItem]}
+              onPress={() => setActiveTab('added')}
+            >
+              <Text style={[styles.statNumber, activeTab === 'added' && styles.activeStatText]}>24</Text>
+              <Text style={[styles.statLabel, activeTab === 'added' && styles.activeStatText]}>Boîtes ajoutées</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.statItem, activeTab === 'visited' && styles.activeStatItem]}
+              onPress={() => setActiveTab('visited')}
+            >
+              <Text style={[styles.statNumber, activeTab === 'visited' && styles.activeStatText]}>156</Text>
+              <Text style={[styles.statLabel, activeTab === 'visited' && styles.activeStatText]}>Boîtes visitées</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.booksList}>
+            <Text style={styles.sectionTitle}>
+              {activeTab === 'added' ? 'Vos boîtes à livres ajoutées' : 'Vos boîtes à livres visitées'}
+            </Text>
+            {[1, 2, 3, 4].map((_, index) => (
+              <View key={index}>
+                {renderBookBox()}
+              </View>
+            ))}
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -144,125 +159,169 @@ const ProfileScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F9FA',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 18,
-    color: '#FF3B30',
-    marginBottom: 20,
+  header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    overflow: 'hidden',
   },
   coverImage: {
     width: '100%',
-    height: 180,
-    backgroundColor: '#E5E5E5',
+    height: '100%',
+    position: 'absolute',
+    flex: 1,
   },
-  headerContainer: {
-    alignItems: 'left',
+  headerActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 16,
+  },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  profileContainer: {
+    marginTop: HEADER_HEIGHT - 50,
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 16,
+  },
+  avatarContainer: {
+    alignItems: 'center',
     marginTop: -50,
-    paddingHorizontal: 20,
-    position: 'relative',
   },
-  profilePicture: {
-    width: 140,
-    height: 140,
-    borderRadius: 100,
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     borderWidth: 4,
-    borderColor: '#FFFFFF',
-    backgroundColor: '#E5E5E5',
+    borderColor: '#FFF',
   },
-  username: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#000000',
+  userInfo: {
+    alignItems: 'center',
     marginTop: 12,
   },
-  bio: {
-    fontSize: 16,
-    color: '#666666',
-    textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  editButton: {
-    position: 'absolute',
-    top: 60,
-    right: 10,
-    padding: 10,
-  },
-  editButtonText: {
-    color: '#3A7C6A',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 20,
-    marginTop: 16,
-    backgroundColor: '#F8F8F8',
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 20,
+  userName: {
+    fontSize: 24,
     fontWeight: '700',
-    color: '#000000',
+    color: '#1A1A1A',
   },
-  statLabel: {
+  userEmail: {
     fontSize: 14,
-    color: '#666666',
+    color: '#666',
     marginTop: 4,
   },
-  statsDivider: {
-    width: 1,
-    height: '100%',
-    backgroundColor: '#E5E5E5',
+  userMetadata: {
+    marginTop: 16,
+    gap: 8,
   },
-  infoSection: {
-    padding: 20,
-  },
-  infoItem: {
+  metadataItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+  },
+  metadataText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  stats: {
+    flexDirection: 'row',
+    marginTop: 24,
+    gap: 16,
+  },
+  statItem: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+  },
+  activeStatItem: {
+    backgroundColor: '#E8F5E9',
+    borderWidth: 2,
+    borderColor: '#3A7C6A',
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  statLabel: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 4,
+  },
+  activeStatText: {
+    color: '#3A7C6A',
+  },
+  booksList: {
+    marginTop: 24,
+    paddingBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1A1A1A',
     marginBottom: 16,
   },
-  infoIcon: {
-    fontSize: 20,
-    marginRight: 12,
+  bookBox: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  infoText: {
-    fontSize: 16,
-    color: '#333333',
-    fontStyle: 'italic',
+  bookBoxImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
   },
-  infoDate: {
-    fontSize: 14,
-    color: '#333333',
-    paddingTop: 20,
+  bookBoxContent: {
+    flex: 1,
+    marginLeft: 12,
   },
-  button: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: '#FFFFFF',
+  bookBoxTitle: {
     fontSize: 16,
     fontWeight: '600',
+    color: '#1A1A1A',
+  },
+  bookBoxAddress: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#3A7C6A',
+    marginRight: 6,
+  },
+  statusText: {
+    fontSize: 14,
+    color: '#3A7C6A',
   },
 });
 
