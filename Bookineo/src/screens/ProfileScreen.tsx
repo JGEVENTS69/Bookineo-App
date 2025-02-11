@@ -13,14 +13,18 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../services/supabase';
+import { useNavigation } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 const HEADER_HEIGHT = 250;
 
-const ProfileScreen = ({ navigation }) => {
+const ProfileScreen = () => {
   const [activeTab, setActiveTab] = useState('added');
   const [user, setUser] = useState(null);
+  const [addedBoxes, setAddedBoxes] = useState([]);
+  const [visitedBoxes, setVisitedBoxes] = useState([]);
   const scrollY = new Animated.Value(0);
+  const navigation = useNavigation();
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -39,8 +43,52 @@ const ProfileScreen = ({ navigation }) => {
       }
     };
 
-    fetchUser();
-  }, []);
+    const fetchAddedBoxes = async () => {
+      const { data, error } = await supabase
+        .from('book_boxes')
+        .select('*')
+        .eq('created_id', user.id);
+      if (error) {
+        console.error(error);
+      } else {
+        setAddedBoxes(data);
+      }
+    };
+
+    const fetchVisitedBoxes = async () => {
+      const { data: visitData, error: visitError } = await supabase
+        .from('box_visits')
+        .select('box_id, created_at')
+        .eq('visitor_id', user.id);
+      if (visitError) {
+        console.error(visitError);
+      } else {
+        const bookBoxIds = visitData.map(visit => visit.box_id);
+        const { data: bookBoxesData, error: bookBoxesError } = await supabase
+          .from('book_boxes')
+          .select('*')
+          .in('id', bookBoxIds);
+
+        if (bookBoxesError) {
+          console.error(bookBoxesError);
+        } else {
+          const visitedBoxesWithDates = bookBoxesData.map(bookBox => {
+            const visit = visitData.find(v => v.box_id === bookBox.id);
+            return {
+              ...bookBox,
+              visited_at: visit ? visit.created_at : null,
+            };
+          });
+          setVisitedBoxes(visitedBoxesWithDates);
+        }
+      }
+    };
+
+    fetchUser().then(() => {
+      fetchAddedBoxes();
+      fetchVisitedBoxes();
+    });
+  }, [user]);
 
   const headerHeight = scrollY.interpolate({
     inputRange: [-30, HEADER_HEIGHT - 100],
@@ -54,41 +102,54 @@ const ProfileScreen = ({ navigation }) => {
     extrapolate: 'clamp'
   });
 
-  const renderBookBox = () => (
+  const renderBookBox = (bookBox) => (
     <TouchableOpacity style={styles.bookBox}>
       <Image
-        source={{ uri: 'https://via.placeholder.com/80' }}
+        source={{ uri: bookBox.photo_url || 'https://via.placeholder.com/80' }}
         style={styles.bookBoxImage}
       />
       <View style={styles.bookBoxContent}>
-        <Text style={styles.bookBoxTitle}>Boîte à livres du Parc</Text>
-        <Text style={styles.bookBoxAddress}>123 rue des Fleurs, Paris</Text>
+        <Text style={styles.bookBoxTitle}>{bookBox.name}</Text>
+        <Text style={styles.bookBoxAddTime}>Ajoutée le {new Date(bookBox.created_at).toLocaleDateString()}</Text>
         <View style={styles.statusContainer}>
-          <View style={styles.statusDot} />
-          <Text style={styles.statusText}>Disponible</Text>
+        <View style={bookBox.status ? styles.statusDotAvailable : styles.statusDotUnavailable} />
+        <Text style={bookBox.status ? styles.statusTextAvailable : styles.statusTextUnavailable}>
+      {bookBox.status ? 'Disponible' : 'Indisponible'}
+    </Text>
         </View>
       </View>
     </TouchableOpacity>
   );
+  const BookVisit = ({ bookBox }) => (
+  <TouchableOpacity style={styles.bookBox}>
+    <Image
+      source={{ uri: bookBox.photo_url || 'https://via.placeholder.com/80' }}
+      style={styles.bookBoxImage}
+    />
+    <View style={styles.bookBoxContent}>
+      <Text style={styles.bookBoxTitle}>{bookBox.name}</Text>
+      <Text style={styles.bookBoxAddTime}>
+        Visitée le {bookBox.visited_at ? new Date(bookBox.visited_at).toLocaleDateString() : 'Date inconnue'}
+      </Text>
+      <View style={styles.statusContainer}>
+        <View style={bookBox.status ? styles.statusDotAvailable : styles.statusDotUnavailable} />
+        <Text style={bookBox.status ? styles.statusTextAvailable : styles.statusTextUnavailable}>
+          {bookBox.status ? 'Disponible' : 'Indisponible'}
+        </Text>
+      </View>
+    </View>
+  </TouchableOpacity>
+);
+ 
 
   return (
     <SafeAreaView style={styles.container}>
-      
-      
       {/* Header animé */}
       <Animated.View style={[styles.header, { height: headerHeight }]}>
         <Image
           source={{ uri: user?.banner_url || 'https://vjwctbtqyipqsnexjukq.supabase.co/storage/v1/object/public/banner//Banner_Empty.png' }}
           style={styles.coverImage}
         />
-        <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Ionicons name="notifications-outline" size={24} color="#FFF" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Ionicons name="settings-outline" size={24} color="#FFF" />
-          </TouchableOpacity>
-        </View>
       </Animated.View>
 
       <ScrollView
@@ -100,6 +161,12 @@ const ProfileScreen = ({ navigation }) => {
         scrollEventThrottle={16}
       >
         <View style={styles.profileContainer}>
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('EditProfile')}>
+              <Ionicons name="settings-outline" size={22} color="white" />
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.avatarContainer}>
             <Image
               source={{ uri: user?.avatar_url || 'https://vjwctbtqyipqsnexjukq.supabase.co/storage/v1/object/public/avatars//Empty-PhotoProfile.png' }}
@@ -128,14 +195,14 @@ const ProfileScreen = ({ navigation }) => {
               style={[styles.statItem, activeTab === 'added' && styles.activeStatItem]}
               onPress={() => setActiveTab('added')}
             >
-              <Text style={[styles.statNumber, activeTab === 'added' && styles.activeStatText]}>24</Text>
+              <Text style={[styles.statNumber, activeTab === 'added' && styles.activeStatText]}>{addedBoxes.length}</Text>
               <Text style={[styles.statLabel, activeTab === 'added' && styles.activeStatText]}>Boîtes ajoutées</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.statItem, activeTab === 'visited' && styles.activeStatItem]}
               onPress={() => setActiveTab('visited')}
             >
-              <Text style={[styles.statNumber, activeTab === 'visited' && styles.activeStatText]}>156</Text>
+              <Text style={[styles.statNumber, activeTab === 'visited' && styles.activeStatText]}>{visitedBoxes.length}</Text>
               <Text style={[styles.statLabel, activeTab === 'visited' && styles.activeStatText]}>Boîtes visitées</Text>
             </TouchableOpacity>
           </View>
@@ -144,11 +211,19 @@ const ProfileScreen = ({ navigation }) => {
             <Text style={styles.sectionTitle}>
               {activeTab === 'added' ? 'Vos boîtes à livres ajoutées' : 'Vos boîtes à livres visitées'}
             </Text>
-            {[1, 2, 3, 4].map((_, index) => (
-              <View key={index}>
-                {renderBookBox()}
-              </View>
-            ))}
+            {activeTab === 'added' ? (
+              addedBoxes.map((bookBox, index) => (
+                <View key={index}>
+                  {renderBookBox(bookBox)}
+                </View>
+              ))
+            ) : (
+              visitedBoxes.map((bookBox, index) => (
+                <View key={index}>
+              <BookVisit bookBox={bookBox} />
+                </View>
+              ))
+            )}
           </View>
         </View>
       </ScrollView>
@@ -177,7 +252,7 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    padding: 16,
+    paddingTop: 15,
   },
   iconButton: {
     width: 40,
@@ -186,7 +261,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.3)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
   },
   profileContainer: {
     marginTop: HEADER_HEIGHT - 50,
@@ -197,7 +271,7 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     alignItems: 'center',
-    marginTop: -50,
+    marginTop: -90,
   },
   avatar: {
     width: 100,
@@ -298,31 +372,42 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   bookBoxTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '700',
     color: '#1A1A1A',
   },
-  bookBoxAddress: {
+  bookBoxAddTime: {
     fontSize: 14,
     color: '#666',
-    marginTop: 4,
+    marginTop: 10,
   },
   statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 8,
   },
-  statusDot: {
+  statusDotAvailable: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: '#3A7C6A',
     marginRight: 6,
   },
-  statusText: {
+  statusDotUnavailable: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#D8596E',
+    marginRight: 6,
+  },
+  statusTextAvailable: {
     fontSize: 14,
     color: '#3A7C6A',
   },
+  statusTextUnavailable: {
+    fontSize: 14,
+    color: '#D8596E',
+  }
 });
 
 export default ProfileScreen;
