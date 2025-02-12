@@ -11,7 +11,7 @@ import {
   StatusBar,
   Animated,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../services/supabase';
 import { useNavigation } from '@react-navigation/native';
 
@@ -179,14 +179,23 @@ const ProfileScreen = () => {
             <Text style={styles.userEmail}>{user?.email}</Text>
           </View>
 
+          <View style={styles.subscriptionContainer}>
+            <View style={styles.metadataItem}>
+            <MaterialCommunityIcons
+              name={user?.subscription ? 'crown' : 'crown-outline'}
+              size={22}
+              color={user?.subscription ? '#E9C46A' : 'gray'}
+            />
+            <Text style={user?.subscription ? styles.subscriptionTextPremium : styles.subscriptionTextFreemium}>
+              {user?.subscription ? 'Premium' : 'Freemium'}
+            </Text>
+            </View>
+          </View>
+
           <View style={styles.userMetadata}>
             <View style={styles.metadataItem}>
-              <Ionicons name="calendar-outline" size={18} color="#666" />
+              <MaterialCommunityIcons name="calendar-clock" size={22} color="#666" />
               <Text style={styles.metadataText}>Membre depuis le {new Date(user?.created_at).toLocaleDateString()}. </Text>
-            </View>
-            <View style={styles.metadataItem}>
-              <Ionicons name="location-outline" size={18} color="#666" />
-              <Text style={styles.metadataText}>Paris, France</Text>
             </View>
           </View>
 
@@ -295,8 +304,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   userMetadata: {
-    marginTop: 16,
-    gap: 8,
+    marginTop: 8,
   },
   metadataItem: {
     flexDirection: 'row',
@@ -407,7 +415,21 @@ const styles = StyleSheet.create({
   statusTextUnavailable: {
     fontSize: 14,
     color: '#D8596E',
-  }
+  },
+  subscriptionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    gap: 8,
+  },
+  subscriptionTextPremium: {
+    color: '#E9C46A',
+    fontWeight: 'bold',
+  },
+  subscriptionTextFreemium: {
+    color: 'gray',
+    fontWeight: 'bold',
+  },
 });
 
 export default ProfileScreen;
