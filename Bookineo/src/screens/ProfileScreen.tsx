@@ -16,7 +16,7 @@ import { supabase } from '../services/supabase';
 import { useNavigation } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
-const HEADER_HEIGHT = 250;
+const HEADER_HEIGHT = 200;
 
 const ProfileScreen = () => {
   const [activeTab, setActiveTab] = useState('added');
@@ -112,35 +112,35 @@ const ProfileScreen = () => {
         <Text style={styles.bookBoxTitle}>{bookBox.name}</Text>
         <Text style={styles.bookBoxAddTime}>Ajoutée le {new Date(bookBox.created_at).toLocaleDateString()}</Text>
         <View style={styles.statusContainer}>
-        <View style={bookBox.status ? styles.statusDotAvailable : styles.statusDotUnavailable} />
-        <Text style={bookBox.status ? styles.statusTextAvailable : styles.statusTextUnavailable}>
-      {bookBox.status ? 'Disponible' : 'Indisponible'}
-    </Text>
+          <View style={bookBox.status ? styles.statusDotAvailable : styles.statusDotUnavailable} />
+          <Text style={bookBox.status ? styles.statusTextAvailable : styles.statusTextUnavailable}>
+            {bookBox.status ? 'Disponible' : 'Indisponible'}
+          </Text>
         </View>
       </View>
     </TouchableOpacity>
   );
+
   const BookVisit = ({ bookBox }) => (
-  <TouchableOpacity style={styles.bookBox}>
-    <Image
-      source={{ uri: bookBox.photo_url || 'https://via.placeholder.com/80' }}
-      style={styles.bookBoxImage}
-    />
-    <View style={styles.bookBoxContent}>
-      <Text style={styles.bookBoxTitle}>{bookBox.name}</Text>
-      <Text style={styles.bookBoxAddTime}>
-        Visitée le {bookBox.visited_at ? new Date(bookBox.visited_at).toLocaleDateString() : 'Date inconnue'}
-      </Text>
-      <View style={styles.statusContainer}>
-        <View style={bookBox.status ? styles.statusDotAvailable : styles.statusDotUnavailable} />
-        <Text style={bookBox.status ? styles.statusTextAvailable : styles.statusTextUnavailable}>
-          {bookBox.status ? 'Disponible' : 'Indisponible'}
+    <TouchableOpacity style={styles.bookBox}>
+      <Image
+        source={{ uri: bookBox.photo_url || 'https://via.placeholder.com/80' }}
+        style={styles.bookBoxImage}
+      />
+      <View style={styles.bookBoxContent}>
+        <Text style={styles.bookBoxTitle}>{bookBox.name}</Text>
+        <Text style={styles.bookBoxAddTime}>
+          Visitée le {bookBox.visited_at ? new Date(bookBox.visited_at).toLocaleDateString() : 'Date inconnue'}
         </Text>
+        <View style={styles.statusContainer}>
+          <View style={bookBox.status ? styles.statusDotAvailable : styles.statusDotUnavailable} />
+          <Text style={bookBox.status ? styles.statusTextAvailable : styles.statusTextUnavailable}>
+            {bookBox.status ? 'Disponible' : 'Indisponible'}
+          </Text>
+        </View>
       </View>
-    </View>
-  </TouchableOpacity>
-);
- 
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -176,23 +176,20 @@ const ProfileScreen = () => {
 
           <View style={styles.userInfo}>
             <Text style={styles.userName}>{user?.username}</Text>
-            <Text style={styles.userEmail}>{user?.email}</Text>
-          </View>
-
-          <View style={styles.subscriptionContainer}>
-            <View style={styles.metadataItem}>
-            <MaterialCommunityIcons
-              name={user?.subscription ? 'crown' : 'crown-outline'}
-              size={22}
-              color={user?.subscription ? '#E9C46A' : 'gray'}
-            />
-            <Text style={user?.subscription ? styles.subscriptionTextPremium : styles.subscriptionTextFreemium}>
-              {user?.subscription ? 'Premium' : 'Freemium'}
-            </Text>
+            <View style={styles.subscriptionContainer}>
+              <View style={styles.metadataItem2}>
+                <Text style={user?.subscription ? styles.subscriptionTextPremium : styles.subscriptionTextFreemium}>
+                  Membre {user?.subscription ? 'PREMIUM' : 'FREEMIUM'}
+                </Text>
+              </View>
             </View>
           </View>
 
           <View style={styles.userMetadata}>
+            <View style={styles.metadataItem}>
+              <MaterialCommunityIcons name="email" size={22} color="#666" />
+              <Text style={styles.metadataText}>{user?.email}</Text>
+            </View>
             <View style={styles.metadataItem}>
               <MaterialCommunityIcons name="calendar-clock" size={22} color="#666" />
               <Text style={styles.metadataText}>Membre depuis le {new Date(user?.created_at).toLocaleDateString()}. </Text>
@@ -229,7 +226,7 @@ const ProfileScreen = () => {
             ) : (
               visitedBoxes.map((bookBox, index) => (
                 <View key={index}>
-              <BookVisit bookBox={bookBox} />
+                  <BookVisit bookBox={bookBox} />
                 </View>
               ))
             )}
@@ -294,22 +291,22 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   userName: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
     color: '#1A1A1A',
   },
   userEmail: {
     fontSize: 14,
     color: '#666',
-    marginTop: 4,
   },
   userMetadata: {
-    marginTop: 8,
+    marginTop: 25,
   },
   metadataItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
+    padding: 3,
   },
   metadataText: {
     fontSize: 14,
@@ -419,12 +416,16 @@ const styles = StyleSheet.create({
   subscriptionContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
-    gap: 8,
   },
   subscriptionTextPremium: {
     color: '#E9C46A',
     fontWeight: 'bold',
+    fontSize: 16,
+  },
+  metadataItem2: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   subscriptionTextFreemium: {
     color: 'gray',
