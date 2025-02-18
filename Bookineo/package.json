@@ -49,6 +49,7 @@
     "react-native-toast-message": "^2.2.1",
     "react-native-vector-icons": "^10.2.0",
     "slick-carousel": "^1.8.1",
+    "stringify": "^2.2.0",
     "swiper": "^11.2.1",
     "tailwindcss": "^4.0.0"
   },

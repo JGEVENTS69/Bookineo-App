@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   StyleSheet,
   StatusBar,
   Animated,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../services/supabase';
@@ -23,67 +24,76 @@ const ProfileScreen = () => {
   const [user, setUser] = useState(null);
   const [addedBoxes, setAddedBoxes] = useState([]);
   const [visitedBoxes, setVisitedBoxes] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
   const scrollY = new Animated.Value(0);
   const navigation = useNavigation();
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-        if (error) {
-          console.error(error);
-        } else {
-          setUser(data);
-        }
-      }
-    };
-
-    const fetchAddedBoxes = async () => {
+  const fetchUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
       const { data, error } = await supabase
-        .from('book_boxes')
+        .from('users')
         .select('*')
-        .eq('created_id', user.id);
+        .eq('id', user.id)
+        .single();
       if (error) {
         console.error(error);
       } else {
-        setAddedBoxes(data);
+        setUser(data);
       }
-    };
+    }
+  };
 
-    const fetchVisitedBoxes = async () => {
-      const { data: visitData, error: visitError } = await supabase
-        .from('box_visits')
-        .select('box_id, created_at')
-        .eq('visitor_id', user.id);
-      if (visitError) {
-        console.error(visitError);
+  const fetchAddedBoxes = async () => {
+    const { data, error } = await supabase
+      .from('book_boxes')
+      .select('*')
+      .eq('created_id', user.id);
+    if (error) {
+      console.error(error);
+    } else {
+      setAddedBoxes(data);
+    }
+  };
+
+  const fetchVisitedBoxes = async () => {
+    const { data: visitData, error: visitError } = await supabase
+      .from('box_visits')
+      .select('box_id, created_at')
+      .eq('visitor_id', user.id);
+    if (visitError) {
+      console.error(visitError);
+    } else {
+      const bookBoxIds = visitData.map(visit => visit.box_id);
+      const { data: bookBoxesData, error: bookBoxesError } = await supabase
+        .from('book_boxes')
+        .select('*')
+        .in('id', bookBoxIds);
+
+      if (bookBoxesError) {
+        console.error(bookBoxesError);
       } else {
-        const bookBoxIds = visitData.map(visit => visit.box_id);
-        const { data: bookBoxesData, error: bookBoxesError } = await supabase
-          .from('book_boxes')
-          .select('*')
-          .in('id', bookBoxIds);
-
-        if (bookBoxesError) {
-          console.error(bookBoxesError);
-        } else {
-          const visitedBoxesWithDates = bookBoxesData.map(bookBox => {
-            const visit = visitData.find(v => v.box_id === bookBox.id);
-            return {
-              ...bookBox,
-              visited_at: visit ? visit.created_at : null,
-            };
-          });
-          setVisitedBoxes(visitedBoxesWithDates);
-        }
+        const visitedBoxesWithDates = bookBoxesData.map(bookBox => {
+          const visit = visitData.find(v => v.box_id === bookBox.id);
+          return {
+            ...bookBox,
+            visited_at: visit ? visit.created_at : null,
+          };
+        });
+        setVisitedBoxes(visitedBoxesWithDates);
       }
-    };
+    }
+  };
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchUser().then(() => {
+      fetchAddedBoxes();
+      fetchVisitedBoxes();
+    }).finally(() => setRefreshing(false));
+  }, []);
+
+  useEffect(() => {
     fetchUser().then(() => {
       fetchAddedBoxes();
       fetchVisitedBoxes();
@@ -159,6 +169,12 @@ const ProfileScreen = () => {
           { useNativeDriver: false }
         )}
         scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+          />
+        }
       >
         <View style={styles.profileContainer}>
           <View style={styles.headerActions}>
@@ -179,7 +195,7 @@ const ProfileScreen = () => {
             <View style={styles.subscriptionContainer}>
               <View style={styles.metadataItem2}>
                 <Text style={user?.subscription ? styles.subscriptionTextPremium : styles.subscriptionTextFreemium}>
-                  Membre {user?.subscription ? 'PREMIUM' : 'FREEMIUM'}
+                  {user?.subscription ? 'PREMIUM' : 'FREEMIUM'}
                 </Text>
               </View>
             </View>
@@ -280,9 +296,9 @@ const styles = StyleSheet.create({
     marginTop: -90,
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 140,
+    height: 140,
+    borderRadius: 100,
     borderWidth: 4,
     borderColor: '#FFF',
   },
@@ -418,14 +434,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   subscriptionTextPremium: {
-    color: '#E9C46A',
+    color: '#3A7C6A',
     fontWeight: 'bold',
     fontSize: 16,
   },
   metadataItem2: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   subscriptionTextFreemium: {
     color: 'gray',
