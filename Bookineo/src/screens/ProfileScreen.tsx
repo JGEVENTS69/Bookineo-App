@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,10 +11,12 @@ import {
   StatusBar,
   Animated,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../services/supabase';
 import { useNavigation } from '@react-navigation/native';
+import { Swipeable } from 'react-native-gesture-handler';
 
 const { width } = Dimensions.get('window');
 const HEADER_HEIGHT = 200;
@@ -27,6 +29,18 @@ const ProfileScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const scrollY = new Animated.Value(0);
   const navigation = useNavigation();
+  
+  // Référence pour garder une trace de la swipeable ouverte
+  const swipeableRefs = useRef([]);
+
+  // Fermer tous les swipeables ouverts sauf celui actif
+  const closeOtherSwipeables = (index) => {
+    swipeableRefs.current.forEach((ref, i) => {
+      if (ref && i !== index) {
+        ref.close();
+      }
+    });
+  };
 
   const fetchUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -112,26 +126,147 @@ const ProfileScreen = () => {
     extrapolate: 'clamp'
   });
 
-  const renderBookBox = (bookBox) => (
-    <TouchableOpacity style={styles.bookBox}>
-      <Image
-        source={{ uri: bookBox.photo_url || 'https://via.placeholder.com/80' }}
-        style={styles.bookBoxImage}
-      />
-      <View style={styles.bookBoxContent}>
-        <Text style={styles.bookBoxTitle}>{bookBox.name}</Text>
-        <Text style={styles.bookBoxAddTime}>Ajoutée le {new Date(bookBox.created_at).toLocaleDateString()}</Text>
-        <View style={styles.statusContainer}>
-          <View style={bookBox.status ? styles.statusDotAvailable : styles.statusDotUnavailable} />
-          <Text style={bookBox.status ? styles.statusTextAvailable : styles.statusTextUnavailable}>
-            {bookBox.status ? 'Disponible' : 'Indisponible'}
-          </Text>
+  const handleDeleteBox = async (boxId) => {
+    Alert.alert(
+      "Confirmation",
+      "Êtes-vous sûr de vouloir supprimer cette boîte à livres ?",
+      [
+        {
+          text: "Annuler",
+          style: "cancel"
+        },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('book_boxes')
+                .delete()
+                .eq('id', boxId);
+              
+              if (error) {
+                console.error("Erreur lors de la suppression:", error);
+                Alert.alert("Erreur", "Impossible de supprimer cette boîte à livres.");
+              } else {
+                // Mettre à jour la liste des boîtes après suppression
+                setAddedBoxes(prevBoxes => prevBoxes.filter(box => box.id !== boxId));
+                Alert.alert("Succès", "La boîte à livres a été supprimée avec succès.");
+              }
+            } catch (error) {
+              console.error("Exception lors de la suppression:", error);
+              Alert.alert("Erreur", "Une erreur s'est produite lors de la suppression.");
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleEditBox = (bookBox) => {
+    navigation.navigate('EditBookBox', { bookBox });
+  };
+
+  // Rendu des actions de swipe à droite (supprimer)
+  const renderRightActions = (bookBox, progress) => {
+    const trans = progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [100, 0],
+    });
+    const opacity = progress.interpolate({
+      inputRange: [0, 0.5, 1],
+      outputRange: [0, 0.5, 1],
+    });
+  
+    return (
+      <View style={styles.swipeActionsContainer}>
+        <Animated.View
+          style={[
+            styles.deleteAction,
+            {
+              transform: [{ translateX: trans }],
+              opacity,
+            },
+          ]}
+        >
+          <TouchableOpacity
+            onPress={() => handleDeleteBox(bookBox.id)}
+            style={styles.actionButton}
+          >
+            <Ionicons name="trash-outline" size={28} color="white" />
+            <Text style={styles.actionText}>Supprimer</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
+    );
+  };
+  
+  // Rendu des actions de swipe à gauche (modifier)
+  const renderLeftActions = (bookBox, progress) => {
+    const trans = progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [-100, 0],
+    });
+    const opacity = progress.interpolate({
+      inputRange: [0, 0.5, 1],
+      outputRange: [0, 0.5, 1],
+    });
+  
+    return (
+      <View style={styles.swipeActionsContainer}>
+        <Animated.View
+          style={[
+            styles.editAction,
+            {
+              transform: [{ translateX: trans }],
+              opacity,
+            },
+          ]}
+        >
+          <TouchableOpacity
+            onPress={() => handleEditBox(bookBox)}
+            style={styles.actionButton}
+          >
+            <Ionicons name="create-outline" size={28} color="white" />
+            <Text style={styles.actionText}>Modifier</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
+    );
+  };
+  
+
+  const renderBookBox = (bookBox, index) => (
+    <Swipeable
+  ref={ref => swipeableRefs.current[index] = ref}
+  renderRightActions={(progress) => renderRightActions(bookBox, progress)}
+  renderLeftActions={(progress) => renderLeftActions(bookBox, progress)}
+  onSwipeableOpen={() => closeOtherSwipeables(index)}
+  friction={1.5}
+  overshootFriction={8}
+  leftThreshold={80}
+  rightThreshold={80}
+>
+  <View style={styles.bookBox}>
+        <Image
+          source={{ uri: bookBox.photo_url || 'https://via.placeholder.com/80' }}
+          style={styles.bookBoxImage}
+        />
+        <View style={styles.bookBoxContent}>
+          <Text style={styles.bookBoxTitle}>{bookBox.name}</Text>
+          <Text style={styles.bookBoxAddTime}>Ajoutée le {new Date(bookBox.created_at).toLocaleDateString()}</Text>
+          <View style={styles.statusContainer}>
+            <View style={bookBox.status ? styles.statusDotAvailable : styles.statusDotUnavailable} />
+            <Text style={bookBox.status ? styles.statusTextAvailable : styles.statusTextUnavailable}>
+              {bookBox.status ? 'Disponible' : 'Indisponible'}
+            </Text>
+          </View>
         </View>
       </View>
-    </TouchableOpacity>
+    </Swipeable>
   );
 
-  const BookVisit = ({ bookBox }) => (
+  const BookVisit = ({ bookBox, index }) => (
     <TouchableOpacity style={styles.bookBox}>
       <Image
         source={{ uri: bookBox.photo_url || 'https://via.placeholder.com/80' }}
@@ -233,18 +368,33 @@ const ProfileScreen = () => {
             <Text style={styles.sectionTitle}>
               {activeTab === 'added' ? 'Vos boîtes à livres ajoutées' : 'Vos boîtes à livres visitées'}
             </Text>
+            
+            <View style={styles.instructions}>
+              <Text style={styles.instructionsText}>
+                {activeTab === 'added' ? 'Glissez une boîte vers la gauche pour la modifier, vers la droite pour la supprimer.' : ''}
+              </Text>
+            </View>
+            
             {activeTab === 'added' ? (
-              addedBoxes.map((bookBox, index) => (
-                <View key={index}>
-                  {renderBookBox(bookBox)}
-                </View>
-              ))
+              addedBoxes.length > 0 ? (
+                addedBoxes.map((bookBox, index) => (
+                  <View key={index}>
+                    {renderBookBox(bookBox, index)}
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.emptyStateText}>Vous n'avez pas encore ajouté de boîtes à livres.</Text>
+              )
             ) : (
-              visitedBoxes.map((bookBox, index) => (
-                <View key={index}>
-                  <BookVisit bookBox={bookBox} />
-                </View>
-              ))
+              visitedBoxes.length > 0 ? (
+                visitedBoxes.map((bookBox, index) => (
+                  <View key={index}>
+                    <BookVisit bookBox={bookBox} index={index} />
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.emptyStateText}>Vous n'avez pas encore visité de boîtes à livres.</Text>
+              )
             )}
           </View>
         </View>
@@ -366,7 +516,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#1A1A1A',
+    marginBottom: 8,
+  },
+  instructions: {
     marginBottom: 16,
+  },
+  instructionsText: {
+    fontSize: 13,
+    color: '#666',
+    fontStyle: 'italic',
   },
   bookBox: {
     flexDirection: 'row',
@@ -446,6 +604,41 @@ const styles = StyleSheet.create({
   subscriptionTextFreemium: {
     color: 'gray',
     fontWeight: 'bold',
+  },
+  // Styles pour les actions de swipe
+  swipeActionsContainer: {
+    width: 100,
+    height: '100%',
+  },
+  deleteAction: {
+    height: '100%',
+    backgroundColor: 'rgba(216, 89, 110, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 100,
+    borderTopRightRadius: 16,
+    borderBottomRightRadius: 16,
+  },
+  editAction: {
+    height: '100%',
+    backgroundColor: 'rgba(58, 124, 106, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 100,
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
+  },
+  actionButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    flex: 1,
+    width: '100%',
+  },
+  actionText: {
+    color: 'white',
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 6,
   },
 });
 
