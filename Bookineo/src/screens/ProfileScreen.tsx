@@ -193,7 +193,7 @@ const ProfileScreen = () => {
             onPress={() => handleDeleteBox(bookBox.id)}
             style={styles.actionButton}
           >
-            <Ionicons name="trash-outline" size={28} color="white" />
+            <Ionicons name="trash-outline" size={28} color="#D8596E" />
             <Text style={styles.actionText}>Supprimer</Text>
           </TouchableOpacity>
         </Animated.View>
@@ -227,8 +227,8 @@ const ProfileScreen = () => {
             onPress={() => handleEditBox(bookBox)}
             style={styles.actionButton}
           >
-            <Ionicons name="create-outline" size={28} color="white" />
-            <Text style={styles.actionText}>Modifier</Text>
+            <Ionicons name="create-outline" size={28} color="#3A7C6A" />
+            <Text style={styles.actionText2}>Modifier</Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -371,7 +371,7 @@ const ProfileScreen = () => {
             
             <View style={styles.instructions}>
               <Text style={styles.instructionsText}>
-                {activeTab === 'added' ? 'Glissez une boîte vers la gauche pour la modifier, vers la droite pour la supprimer.' : ''}
+                {activeTab === 'added' ? '"Glissez vers la gauche pour modifier votre boîte à livres, ou vers la droite pour la supprimer."' : ''}
               </Text>
             </View>
             
@@ -525,6 +525,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     fontStyle: 'italic',
+    textAlign: 'center',
   },
   bookBox: {
     flexDirection: 'row',
@@ -612,7 +613,6 @@ const styles = StyleSheet.create({
   },
   deleteAction: {
     height: '100%',
-    backgroundColor: 'rgba(216, 89, 110, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
     width: 100,
@@ -621,7 +621,6 @@ const styles = StyleSheet.create({
   },
   editAction: {
     height: '100%',
-    backgroundColor: 'rgba(58, 124, 106, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
     width: 100,
@@ -635,7 +634,13 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   actionText: {
-    color: 'white',
+    color: '#D8596E',
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 6,
+  },
+  actionText2: {
+    color: '#3A7C6A',
     fontSize: 13,
     fontWeight: '600',
     marginTop: 6,

@@ -5,12 +5,17 @@ import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../services/supabase';
 import { BlurView } from 'expo-blur';
 import { useNavigation } from '@react-navigation/native';
+import ModalCover from '../components/modalCover';
+import UsernameModal from '../components/usernameModal';
 
 const EditProfile = () => {
   const [username, setUsername] = useState('');
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [coverUrl, setCoverUrl] = useState(null);
+  const [coverModalVisible, setCoverModalVisible] = useState(false);
   const [newAvatar, setNewAvatar] = useState(null);
+  const [usernameModalVisible, setUsernameModalVisible] = useState(false);
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const navigation = useNavigation();
@@ -44,9 +49,7 @@ const EditProfile = () => {
   };
 
   const closeModal = () => {
-    // Réinitialiser la photo sélectionnée lorsque le modal est fermé
     setNewAvatar(null);
-
     Animated.timing(opacityAnim, {
       toValue: 0,
       duration: 150,
@@ -65,7 +68,7 @@ const EditProfile = () => {
       } else if (user) {
         const { data, error } = await supabase
           .from('users')
-          .select('username, avatar_url')
+          .select('username, avatar_url, banner_url')
           .eq('id', user.id);
 
         if (error) {
@@ -73,6 +76,8 @@ const EditProfile = () => {
         } else if (data && data.length > 0) {
           setUsername(data[0].username);
           setAvatarUrl(data[0].avatar_url);
+          setCoverUrl(data[0].banner_url);
+          console.log('User data fetched:', data[0]);
         }
       } else {
         console.error('No user is logged in');
@@ -189,10 +194,10 @@ const EditProfile = () => {
           <TouchableOpacity style={styles.optionButton} onPress={() => setModalVisible(true)}>
             <Text style={styles.optionButtonText}>Modifier votre photo de profil</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.optionButton}>
+          <TouchableOpacity style={styles.optionButton} onPress={() => setCoverModalVisible(true)}>
             <Text style={styles.optionButtonText}>Modifier votre photo de couverture</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.optionButton}>
+          <TouchableOpacity style={styles.optionButton} onPress={() => setUsernameModalVisible(true)}>
             <Text style={styles.optionButtonText}>Modifier votre pseudo</Text>
           </TouchableOpacity>
         </View>
@@ -212,6 +217,27 @@ const EditProfile = () => {
           <Text style={styles.logoutButtonText}>Déconnexion</Text>
         </TouchableOpacity>
       </View>
+
+      <ModalCover
+        visible={coverModalVisible}
+        onClose={() => setCoverModalVisible(false)}
+        onSave={(url) => {
+          setCoverUrl(url);
+          setCoverModalVisible(false);
+        }}
+        title="Photo de couverture"
+        bucket="banner"
+        column="banner_url"
+      />
+
+      <UsernameModal
+        visible={usernameModalVisible}
+        onClose={() => setUsernameModalVisible(false)}
+        onSave={(newUsername) => {
+          setUsername(newUsername);
+          setUsernameModalVisible(false);
+        }}
+      />
 
       <Modal
         animationType="none"
@@ -273,10 +299,10 @@ const EditProfile = () => {
                   <TouchableOpacity
                     style={[
                       styles.saveButton,
-                      !newAvatar && styles.disabledButton, // Désactive le bouton si aucune photo n'est sélectionnée
+                      !newAvatar && styles.disabledButton,
                     ]}
                     onPress={newAvatar ? saveProfileImage : null}
-                    disabled={!newAvatar}  // Le bouton est désactivé si aucune photo n'est sélectionnée
+                    disabled={!newAvatar}
                   >
                     <Ionicons
                       name="checkmark-circle-outline"
