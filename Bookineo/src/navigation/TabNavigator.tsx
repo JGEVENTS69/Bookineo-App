@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Settings } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { MapPin, Heart, User, Plus, NavigationOff } from 'lucide-react-native';
+import { MapPin, Heart, User, SettingsIcon } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import MapScreen from '../screens/MapScreen';
 import AddBoxScreen from '@screens/AddBoxScreen';
@@ -15,11 +15,6 @@ import EditProfile from '@screens/EditProfile';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-const Visites = () => (
-  <View style={styles.screen}>
-    <Text>Visites</Text>
-  </View>
-);
 
 const MapStack = ({ navigation }) => {
   useEffect(() => {
@@ -50,15 +45,6 @@ const MapStack = ({ navigation }) => {
   );
 };
 
-const ProfileStack = () => {
-  return (
-    <Stack.Navigator>
-      <Stack.Screen name="ProfileScreen" component={ProfileScreen} options={{ title: 'Profil' }} />
-      <Stack.Screen name="EditProfile" component={EditProfile} options={{ title: 'Modifier votre profil' }} />
-    </Stack.Navigator>
-  );
-};
-
 const TabNavigator = () => {
   return (
     <Tab.Navigator
@@ -70,8 +56,8 @@ const TabNavigator = () => {
             return <Heart color={color} size={size} />;
           } else if (route.name === 'Profil') {
             return <User color={color} size={size} />;
-          } else if (route.name === 'Visites') {
-            return <NavigationOff color={color} size={size} />;
+          } else if (route.name === 'Setting') {
+            return <SettingsIcon color={color} size={size} />;
           }
           return null;
         },
@@ -87,7 +73,6 @@ const TabNavigator = () => {
     >
       <Tab.Screen name="Map" component={MapStack} options={{ headerShown: false }} />
       <Tab.Screen name="Favorites" component={FavorisScreen} options={{ title: 'Favoris' }} />
-      <Tab.Screen name="Profil" component={ProfileStack} options={{ headerShown: false }} />
       <Tab.Screen
         name="Add"
         component={AddBoxScreen}
@@ -97,6 +82,8 @@ const TabNavigator = () => {
           tabBarButton: (props) => <CustomTabBarButton {...props} />,
         }}
       />
+      <Tab.Screen name="Profil" component={ProfileScreen} options={{ title: 'Profil' }} />
+      <Tab.Screen name="Setting" component={EditProfile} options={{ title: 'Paramètres' }} />
     </Tab.Navigator>
   );
 };

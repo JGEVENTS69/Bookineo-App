@@ -7,13 +7,14 @@ import {
   Image,
   TouchableOpacity,
   Text,
-  Linking,
+  TextInput,
   TouchableWithoutFeedback,
+  Animated,
 } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { supabase } from 'src/services/supabase';
-import { LocateFixed, Navigation, MapPin, User, Clock, Star, X, HousePlus, MapPinned, Info } from 'lucide-react-native';
+import { LocateFixed, Search, MapPin, User, Clock, Star, X, HousePlus, MapPinned, Info } from 'lucide-react-native';
 import { getDistance } from 'geolib';
 
 interface BookBox {
@@ -28,6 +29,7 @@ interface BookBox {
 
 const MapScreen = ({ navigation }) => {
   const mapRef = useRef<MapView | null>(null);
+  const searchBarAnimation = useRef(new Animated.Value(0)).current;
   const [region, setRegion] = useState<{
     latitude: number;
     longitude: number;
@@ -41,6 +43,8 @@ const MapScreen = ({ navigation }) => {
     null
   );
   const [selectedBookBox, setSelectedBookBox] = useState<BookBox | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [showSearchBar, setShowSearchBar] = useState<boolean>(false);
 
   const handleBookBoxPress = async (box: BookBox) => {
     if (mapRef.current) {
@@ -83,6 +87,18 @@ const MapScreen = ({ navigation }) => {
     }
   };
 
+  const toggleSearchBar = () => {
+    const toValue = showSearchBar ? 0 : 1;
+    setShowSearchBar(!showSearchBar);
+
+    Animated.spring(searchBarAnimation, {
+      toValue,
+      useNativeDriver: false,
+      friction: 8,
+      tension: 40
+    }).start();
+  };
+
   const openNavigationInfo = () => {
     if (selectedBookBox) {
       navigation.navigate('BoxInfoScreen', { selectedBox: selectedBookBox });
@@ -91,6 +107,25 @@ const MapScreen = ({ navigation }) => {
 
   const handleOutsidePress = () => {
     setSelectedBookBox(null);
+    if (showSearchBar) {
+      toggleSearchBar();
+    }
+  };
+
+  const refreshData = async () => {
+    const { data, error } = await supabase.from('book_boxes').select('*');
+    if (!error && data) {
+      setBookBoxes(data);
+      if (userLocation) {
+        const filtered = data.filter((box) =>
+          getDistance(
+            { latitude: userLocation.latitude, longitude: userLocation.longitude },
+            { latitude: box.latitude, longitude: box.longitude }
+          ) <= 10000
+        );
+        setFilteredBookBoxes(filtered);
+      }
+    }
   };
 
   useEffect(() => {
@@ -133,6 +168,18 @@ const MapScreen = ({ navigation }) => {
     initializeMap();
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(refreshData, 10000); // Rafraîchir toutes les 10 secondes
+    return () => clearInterval(interval);
+  }, [userLocation]);
+
+  useEffect(() => {
+    const filtered = bookBoxes.filter((box) =>
+      box.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setFilteredBookBoxes(filtered);
+  }, [searchQuery, bookBoxes]);
+
   if (loading || !region) {
     return (
       <View style={styles.loadingContainer}>
@@ -140,6 +187,16 @@ const MapScreen = ({ navigation }) => {
       </View>
     );
   }
+
+  const searchBarWidth = searchBarAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '80%']
+  });
+
+  const searchBarOpacity = searchBarAnimation.interpolate({
+    inputRange: [0, 0.7, 1],
+    outputRange: [0, 0, 1]
+  });
 
   return (
     <TouchableWithoutFeedback onPress={handleOutsidePress}>
@@ -151,7 +208,7 @@ const MapScreen = ({ navigation }) => {
           showsUserLocation
           showsMyLocationButton={false}
         >
-          {bookBoxes.map((box) => (
+          {filteredBookBoxes.map((box) => (
             <Marker
               key={box.id}
               coordinate={{ latitude: box.latitude, longitude: box.longitude }}
@@ -166,15 +223,52 @@ const MapScreen = ({ navigation }) => {
             </Marker>
           ))}
         </MapView>
+
+        {/* Barre de recherche modernisée */}
+        <View style={styles.searchBarContainer}>
+          <TouchableOpacity
+            style={styles.searchButton}
+            onPress={toggleSearchBar}
+          >
+            <Search size={24} color="#3a7c6a" />
+          </TouchableOpacity>
+
+          <Animated.View style={[
+            styles.searchInputContainer,
+            {
+              width: searchBarWidth,
+              opacity: searchBarOpacity
+            }
+          ]}>
+            <Search size={20} color="#9e9e9e" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Rechercher une boîte à livres..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#9e9e9e"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={() => setSearchQuery('')}
+              >
+                <X size={18} color="#9e9e9e" />
+              </TouchableOpacity>
+            )}
+          </Animated.View>
+        </View>
+
         <TouchableOpacity style={styles.recenterButton} onPress={recenterToUserLocation}>
-          <LocateFixed size={30} color="black" />
+          <LocateFixed size={24} color="#3a7c6a" />
         </TouchableOpacity>
+
         {selectedBookBox && (
-          <View style={styles.bookBoxInfoContainer}>
+          <Animated.View style={styles.bookBoxInfoContainer}>
             <View style={styles.headerContainer}>
               <Text style={styles.title}>{selectedBookBox.name}</Text>
               <TouchableOpacity style={styles.closeButton} onPress={() => setSelectedBookBox(null)}>
-                <X size={24} color="black" />
+                <X size={24} color="#333" />
               </TouchableOpacity>
             </View>
 
@@ -184,9 +278,10 @@ const MapScreen = ({ navigation }) => {
                 style={styles.bookBoxImage}
               />
             )}
+
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
-                <MapPin size={24} color="#3a7c6a" />
+                <MapPin size={20} color="#3a7c6a" />
                 <Text style={styles.statText}>
                   {userLocation
                     ? `${(getDistance(
@@ -198,19 +293,19 @@ const MapScreen = ({ navigation }) => {
               </View>
 
               <View style={styles.statItem}>
-                <MapPinned size={24} color="#3a7c6a" />
+                <Clock size={20} color="#3a7c6a" />
                 <Text style={styles.statText}>5-10 min</Text>
               </View>
 
               <View style={styles.statItem}>
-                <Star size={24} color="#3a7c6a" />
+                <Star size={20} color="#3a7c6a" />
                 <Text style={styles.statText}>4.2 (33)</Text>
               </View>
             </View>
 
             <View style={styles.tagsContainer}>
               <View style={styles.tag}>
-                <HousePlus size={16} color="white" style={{ marginRight: 8 }} />
+                <User size={16} color="white" style={{ marginRight: 8 }} />
                 <Text style={styles.tagText}>
                   Ajouté par {selectedBookBox.creator_username || 'Utilisateur inconnu'}
                 </Text>
@@ -218,10 +313,10 @@ const MapScreen = ({ navigation }) => {
             </View>
 
             <TouchableOpacity style={styles.navigateButton} onPress={openNavigationInfo}>
-              <Info size={24} color="white" />
-              <Text style={styles.navigateButtonText}>Détails de la boîte</Text>
+              <Info size={20} color="white" />
+              <Text style={styles.navigateButtonText}>Voir les détails</Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         )}
       </View>
     </TouchableWithoutFeedback>
@@ -229,123 +324,181 @@ const MapScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  map: { flex: 1 },
+  container: {
+    flex: 1
+  },
+  map: {
+    flex: 1
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  markerContainer: { alignItems: 'center', justifyContent: 'center', width: 60, height: 60 },
-  markerImage: { width: '100%', height: '100%', resizeMode: 'contain' },
-  recenterButton: {
+  markerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 60,
+    height: 60
+  },
+  markerImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain'
+  },
+
+  // Nouvelle section de barre de recherche
+  searchBarContainer: {
     position: 'absolute',
     top: 20,
-    right: 20,
+    left: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  searchButton: {
     backgroundColor: 'white',
-    borderRadius: 25,
+    borderRadius: 16,
     width: 50,
     height: 50,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    zIndex: 2,
   },
+  searchInputContainer: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    height: 50,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 10,
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    zIndex: 1,
+    overflow: 'hidden',
+  },
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+    height: '100%',
+  },
+  clearButton: {
+    padding: 5,
+  },
+
+  recenterButton: {
+    position: 'absolute',
+    top: 80,
+    left: 20,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+
   bookBoxInfoContainer: {
     position: 'absolute',
     bottom: 20,
     left: 15,
     right: 15,
     backgroundColor: 'white',
-    borderRadius: 16,
+    borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
     elevation: 10,
-    padding: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
-
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 16,
   },
-
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '700',
     color: '#333',
+    flexShrink: 1,
+    marginRight: 10,
   },
-
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 16,
   },
-
   statItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-
   statText: {
     fontSize: 16,
-    color: '#333',
+    color: '#555',
     fontWeight: '500',
   },
-
   tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
     marginBottom: 16,
   },
-
   tag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(124, 124, 124, 0.57)',
+    backgroundColor: '#3a7c6a',
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderRadius: 20,
   },
-
   tagText: {
     color: 'white',
     fontSize: 14,
     fontWeight: '500',
   },
-
   bookBoxImage: {
     width: '100%',
-    height: 150,
+    height: 180,
     borderRadius: 12,
     marginBottom: 16,
     resizeMode: 'cover',
   },
-
   navigateButton: {
     backgroundColor: '#3a7c6a',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
+    padding: 14,
     borderRadius: 12,
     gap: 8,
   },
-
   navigateButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
   },
-
   closeButton: {
     padding: 4,
   },

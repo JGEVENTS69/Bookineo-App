@@ -1,12 +1,15 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Image, Alert, Animated, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../services/supabase';
 import { BlurView } from 'expo-blur';
 import { useNavigation } from '@react-navigation/native';
 import ModalCover from '../components/modalCover';
 import UsernameModal from '../components/usernameModal';
+import PasswordModal from '../components/PasswordModal';
+import EmailModal from '../components/EmailModal'; // Import du composant EmailModal
 
 const EditProfile = () => {
   const [username, setUsername] = useState('');
@@ -16,6 +19,8 @@ const EditProfile = () => {
   const [coverModalVisible, setCoverModalVisible] = useState(false);
   const [newAvatar, setNewAvatar] = useState(null);
   const [usernameModalVisible, setUsernameModalVisible] = useState(false);
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [emailModalVisible, setEmailModalVisible] = useState(false); // État pour le modal de l'email
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const navigation = useNavigation();
@@ -186,32 +191,50 @@ const EditProfile = () => {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
+
+         {/* Section Informations Personnelles */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="person" size={22} color="#3A7C6A" />
             <Text style={styles.sectionTitle}>Informations personnelles</Text>
           </View>
+          <TouchableOpacity style={styles.optionButton} onPress={() => setUsernameModalVisible(true)}>
+            <Text style={styles.optionButtonText}>Modifier votre nom d'utilisateur</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.optionButton} onPress={() => setModalVisible(true)}>
             <Text style={styles.optionButtonText}>Modifier votre photo de profil</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.optionButton} onPress={() => setCoverModalVisible(true)}>
             <Text style={styles.optionButtonText}>Modifier votre photo de couverture</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.optionButton} onPress={() => setUsernameModalVisible(true)}>
-            <Text style={styles.optionButtonText}>Modifier votre pseudo</Text>
-          </TouchableOpacity>
         </View>
 
+        {/* Section Sécurité */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="lock-closed" size={22} color="#3A7C6A" />
             <Text style={styles.sectionTitle}>Sécurité</Text>
           </View>
-          <TouchableOpacity style={styles.optionButton}>
+          <TouchableOpacity style={styles.optionButton} onPress={() => setPasswordModalVisible(true)}>
             <Text style={styles.optionButtonText}>Modifier votre mot de passe</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.optionButton} onPress={() => setEmailModalVisible(true)}>
+            <Text style={styles.optionButtonText}>Modifier votre adresse email</Text>
           </TouchableOpacity>
         </View>
 
+      {/* Section Abonnement */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <MaterialCommunityIcons name="crown" size={22} color="#3A7C6A" />
+            <Text style={styles.sectionTitle}>Abonnement</Text>
+          </View>
+          <TouchableOpacity style={styles.optionButton}>
+            <Text style={styles.optionButtonText}>Gérer votre abonnement</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Section Déconnexion */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={20} color="#ff4444" />
           <Text style={styles.logoutButtonText}>Déconnexion</Text>
@@ -237,6 +260,16 @@ const EditProfile = () => {
           setUsername(newUsername);
           setUsernameModalVisible(false);
         }}
+      />
+
+      <PasswordModal
+        visible={passwordModalVisible}
+        onClose={() => setPasswordModalVisible(false)}
+      />
+
+      <EmailModal
+        visible={emailModalVisible}
+        onClose={() => setEmailModalVisible(false)}
       />
 
       <Modal

@@ -73,7 +73,7 @@ const ProfileScreen = () => {
   const fetchVisitedBoxes = async () => {
     const { data: visitData, error: visitError } = await supabase
       .from('box_visits')
-      .select('box_id, created_at')
+      .select('box_id, created_at, rating')
       .eq('visitor_id', user.id);
     if (visitError) {
       console.error(visitError);
@@ -92,6 +92,7 @@ const ProfileScreen = () => {
           return {
             ...bookBox,
             visited_at: visit ? visit.created_at : null,
+            rating: visit ? visit.rating : null,
           };
         });
         setVisitedBoxes(visitedBoxesWithDates);
@@ -273,7 +274,19 @@ const ProfileScreen = () => {
         style={styles.bookBoxImage}
       />
       <View style={styles.bookBoxContent}>
-        <Text style={styles.bookBoxTitle}>{bookBox.name}</Text>
+        <View style={styles.bookBoxHeader}>
+          <Text style={styles.bookBoxTitle}>{bookBox.name}</Text>
+          <View style={styles.ratingContainer}>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Ionicons
+                key={i}
+                name={i < bookBox.rating ? 'star' : 'star-outline'}
+                size={18}
+                color="#FFD700"
+              />
+            ))}
+          </View>
+        </View>
         <Text style={styles.bookBoxAddTime}>
           Visitée le {bookBox.visited_at ? new Date(bookBox.visited_at).toLocaleDateString() : 'Date inconnue'}
         </Text>
@@ -312,12 +325,6 @@ const ProfileScreen = () => {
         }
       >
         <View style={styles.profileContainer}>
-          <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('EditProfile')}>
-              <Ionicons name="settings-outline" size={22} color="white" />
-            </TouchableOpacity>
-          </View>
-
           <View style={styles.avatarContainer}>
             <Image
               source={{ uri: user?.avatar_url || 'https://vjwctbtqyipqsnexjukq.supabase.co/storage/v1/object/public/avatars//Empty-PhotoProfile.png' }}
@@ -644,6 +651,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     marginTop: 6,
+  },
+  bookBoxHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });
 

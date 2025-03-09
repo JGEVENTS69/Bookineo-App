@@ -1,3 +1,4 @@
+// Bookineo/src/components/usernameModal.tsx
 import React, { useRef, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, Alert, Animated, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +13,7 @@ interface UsernameModalProps {
 
 const UsernameModal: React.FC<UsernameModalProps> = ({ visible, onClose, onSave }) => {
   const [newUsername, setNewUsername] = useState('');
+  const [initialUsername, setInitialUsername] = useState('');
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -58,6 +60,7 @@ const UsernameModal: React.FC<UsernameModalProps> = ({ visible, onClose, onSave 
         console.error('Error fetching user data:', error);
       } else if (data) {
         setNewUsername(data.username);
+        setInitialUsername(data.username);
       }
     } else {
       console.error('No user is logged in');
@@ -66,6 +69,7 @@ const UsernameModal: React.FC<UsernameModalProps> = ({ visible, onClose, onSave 
 
   const resetModal = () => {
     setNewUsername('');
+    setInitialUsername('');
   };
 
   const handleInputFocus = () => {
@@ -75,7 +79,7 @@ const UsernameModal: React.FC<UsernameModalProps> = ({ visible, onClose, onSave 
   };
 
   const saveUsername = async () => {
-    if (!newUsername) return;
+    if (!newUsername || newUsername === initialUsername) return;
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -133,16 +137,18 @@ const UsernameModal: React.FC<UsernameModalProps> = ({ visible, onClose, onSave 
         >
           <Pressable onPress={() => {}} style={{ width: '100%' }}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Modifier votre pseudo</Text>
+              <Text style={styles.modalTitle}>Nom d'utilisateur</Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                 <Ionicons name="close-circle-outline" size={28} color="#555" />
               </TouchableOpacity>
             </View>
 
             <View style={styles.modalBody}>
+            <Text style={styles.metadataText}>Modifier votre nom d'utilisateur. </Text>
               <TextInput
                 style={styles.input}
                 placeholder="Nouveau pseudo"
+                placeholderTextColor="#ffffff80"
                 value={newUsername}
                 onChangeText={setNewUsername}
                 onFocus={handleInputFocus}
@@ -152,10 +158,10 @@ const UsernameModal: React.FC<UsernameModalProps> = ({ visible, onClose, onSave 
                 <TouchableOpacity
                   style={[
                     styles.saveButton,
-                    !newUsername && styles.disabledButton,
+                    (newUsername === initialUsername || !newUsername) && styles.disabledButton,
                   ]}
-                  onPress={newUsername ? saveUsername : null}
-                  disabled={!newUsername}
+                  onPress={newUsername !== initialUsername ? saveUsername : null}
+                  disabled={newUsername === initialUsername || !newUsername}
                 >
                   <Ionicons
                     name="checkmark-circle-outline"
@@ -224,10 +230,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 20,
   },
+
+  metadataText: {
+    color: '#555',
+    fontSize: 14,
+    marginBottom: 12,
+  },
+
   actions: {
     width: '100%',
     alignItems: 'center',
   },
+
   saveButton: {
     backgroundColor: '#3A7C6A',
     flexDirection: 'row',
