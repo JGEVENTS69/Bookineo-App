@@ -4,12 +4,13 @@ import { View, Text, TouchableOpacity, StyleSheet, Modal, Image, Alert, Animated
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../services/supabase';
+import supabaseAdmin from '../services/supabaseAdmin';
 import { BlurView } from 'expo-blur';
 import { useNavigation } from '@react-navigation/native';
 import ModalCover from '../components/modalCover';
 import UsernameModal from '../components/usernameModal';
 import PasswordModal from '../components/PasswordModal';
-import EmailModal from '../components/EmailModal'; // Import du composant EmailModal
+import ModalDeleteAccount from '../components/modalDeleteAccount';
 
 const EditProfile = () => {
   const [username, setUsername] = useState('');
@@ -20,7 +21,7 @@ const EditProfile = () => {
   const [newAvatar, setNewAvatar] = useState(null);
   const [usernameModalVisible, setUsernameModalVisible] = useState(false);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
-  const [emailModalVisible, setEmailModalVisible] = useState(false); // État pour le modal de l'email
+  const [deleteAccountModalVisible, setDeleteAccountModalVisible] = useState(false);
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const navigation = useNavigation();
@@ -92,8 +93,22 @@ const EditProfile = () => {
     fetchUserData();
   }, []);
 
-  const handleLogout = () => {
-    console.log('Déconnexion');
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+  
+      if (error) {
+        console.error('Erreur lors de la déconnexion:', error);
+        Alert.alert('Erreur', 'Impossible de se déconnecter. Veuillez réessayer.');
+        return;
+      }
+  
+      // Rediriger vers la page de connexion après la déconnexion
+      navigation.navigate('Login');
+    } catch (error) {
+      console.error('Erreur inattendue lors de la déconnexion:', error);
+      Alert.alert('Erreur', 'Une erreur inattendue est survenue.');
+    }
   };
 
   const pickImage = async () => {
@@ -188,6 +203,42 @@ const EditProfile = () => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        Alert.alert('Erreur', 'Utilisateur non authentifié.');
+        return;
+      }
+
+      // Supprimer l'utilisateur de la base de données d'authentification
+      const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
+      if (authError) {
+        console.error('Erreur suppression utilisateur auth:', authError);
+        Alert.alert('Erreur', "Impossible de supprimer l'utilisateur de la base d'authentification.");
+        return;
+      }
+
+      // Supprimer l'utilisateur de la table 'users'
+      const { error: userError } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', user.id);
+
+      if (userError) {
+        console.error('Erreur suppression utilisateur:', userError);
+        Alert.alert('Erreur', "Impossible de supprimer l'utilisateur de la base de données.");
+        return;
+      }
+
+      Alert.alert('Succès', 'Votre compte a été supprimé.');
+      navigation.navigate('Login'); // Rediriger vers la page de connexion après suppression
+    } catch (error) {
+      console.error('Erreur inattendue:', error);
+      Alert.alert('Erreur', "Une erreur inattendue est survenue.");
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.content}>
@@ -218,9 +269,6 @@ const EditProfile = () => {
           <TouchableOpacity style={styles.optionButton} onPress={() => setPasswordModalVisible(true)}>
             <Text style={styles.optionButtonText}>Modifier votre mot de passe</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.optionButton} onPress={() => setEmailModalVisible(true)}>
-            <Text style={styles.optionButtonText}>Modifier votre adresse email</Text>
-          </TouchableOpacity>
         </View>
 
       {/* Section Abonnement */}
@@ -236,8 +284,12 @@ const EditProfile = () => {
 
         {/* Section Déconnexion */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color="#ff4444" />
+          <Ionicons name="log-out-outline" size={20} color="white" />
           <Text style={styles.logoutButtonText}>Déconnexion</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.deletAccountButton} onPress={() => setDeleteAccountModalVisible(true)}>
+          <Ionicons name="trash-bin-outline" size={20} color="#ff4444" />
+          <Text style={styles.deletButtonText}>Supprimer mon compte</Text>
         </TouchableOpacity>
       </View>
 
@@ -267,9 +319,10 @@ const EditProfile = () => {
         onClose={() => setPasswordModalVisible(false)}
       />
 
-      <EmailModal
-        visible={emailModalVisible}
-        onClose={() => setEmailModalVisible(false)}
+<ModalDeleteAccount
+        visible={deleteAccountModalVisible}
+        onClose={() => setDeleteAccountModalVisible(false)}
+        onConfirm={handleDeleteAccount}
       />
 
       <Modal
@@ -414,8 +467,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 15,
     marginTop: 10,
+    backgroundColor: '#3A7C6A',
+    borderRadius: 12,
+  },
+  deletAccountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 15,
+    marginTop: 10,
   },
   logoutButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '500',
+    marginLeft: 8,
+  },
+  deletButtonText: {
     color: '#ff4444',
     fontSize: 16,
     fontWeight: '500',

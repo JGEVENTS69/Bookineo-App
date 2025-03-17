@@ -35,7 +35,7 @@ const LoginScreen = () => {
       });
 
       if (error) {
-        Alert.alert('Erreur', error.message);
+        Alert.alert('Erreur', 'Email ou mot de passe incorrect.');
       } else {
         navigation.reset({
           index: 0,

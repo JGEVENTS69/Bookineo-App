@@ -2,13 +2,13 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Settings } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { MapPin, Heart, User, SettingsIcon } from 'lucide-react-native';
+import { MapPin, BookOpen, User, SettingsIcon } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import MapScreen from '../screens/MapScreen';
 import AddBoxScreen from '@screens/AddBoxScreen';
 import BoxInfoScreen from '@screens/BoxInfoScreen';
 import CustomTabBarButton from '../components/CustomTabBarButton';
-import FavorisScreen from '@screens/FavorisScreen';
+import MyBoxScreen from '@screens/MyBoxScreen';
 import ProfileScreen from '@screens/ProfileScreen';
 import EditProfile from '@screens/EditProfile';
 
@@ -52,8 +52,8 @@ const TabNavigator = () => {
         tabBarIcon: ({ color, size }) => {
           if (route.name === 'Map') {
             return <MapPin color={color} size={size} />;
-          } else if (route.name === 'Favorites') {
-            return <Heart color={color} size={size} />;
+          } else if (route.name === 'Box') {
+            return <BookOpen color={color} size={size} />;
           } else if (route.name === 'Profil') {
             return <User color={color} size={size} />;
           } else if (route.name === 'Setting') {
@@ -72,7 +72,7 @@ const TabNavigator = () => {
       })}
     >
       <Tab.Screen name="Map" component={MapStack} options={{ headerShown: false }} />
-      <Tab.Screen name="Favorites" component={FavorisScreen} options={{ title: 'Favoris' }} />
+      <Tab.Screen name="Box" component={MyBoxScreen} options={{ title: 'Boîte à livres' }} />
       <Tab.Screen
         name="Add"
         component={AddBoxScreen}

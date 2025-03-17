@@ -20,9 +20,6 @@ import MapView, { Marker } from 'react-native-maps';
 import { supabase } from 'src/services/supabase'; // Importe Supabase
 import Toast from 'react-native-toast-message';
 
-
-
-
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const BoxInfoScreen = ({ route, navigation }) => {
@@ -34,28 +31,29 @@ const BoxInfoScreen = ({ route, navigation }) => {
   const [rating, setRating] = useState(0);
   const headerImageScale = new Animated.Value(1);
   const [avatarUrl, setAvatarUrl] = useState(null);
+  const [hasVisited, setHasVisited] = useState(false);
 
   useEffect(() => {
     const loadAvatar = async () => {
       const avatar = await fetchUserAvatar(selectedBox.created_id);  // Utilisation de created_id
       setAvatarUrl(avatar);
     };
-  
+
     loadAvatar();
   }, []);
-  
+
   const fetchUserAvatar = async (createdId) => {
     const { data, error } = await supabase
       .from('users')  // Nom de la table des utilisateurs
       .select('avatar_url') // Sélectionne uniquement l'avatar
       .eq('id', createdId)  // Filtre avec l'ID utilisateur stocké dans created_id
       .single();  // On attend un seul résultat
-  
+
     if (error) {
       console.error("Erreur lors de la récupération de l'avatar :", error);
       return null; // Retourne null en cas d'erreur
     }
-  
+
     return data.avatar_url; // Retourne l'URL de l'avatar
   };
 
@@ -86,6 +84,35 @@ const BoxInfoScreen = ({ route, navigation }) => {
     };
 
     checkIfLiked();
+  }, [selectedBox.id]);
+
+  useEffect(() => {
+    const checkIfVisited = async () => {
+      const { data: user, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        console.error('Utilisateur non connecté');
+        return;
+      }
+
+      try {
+        const { data: visitData, error: visitError } = await supabase
+          .from('box_visits')
+          .select('*')
+          .eq('visitor_id', user.user.id)
+          .eq('box_id', selectedBox.id);
+
+        if (visitError) {
+          console.error('Erreur de récupération des visites:', visitError);
+          return;
+        }
+
+        setHasVisited(visitData.length > 0); // Mise à jour de l'état en fonction de la présence de la visite
+      } catch (error) {
+        console.error('Erreur lors de la vérification des visites:', error);
+      }
+    };
+
+    checkIfVisited();
   }, [selectedBox.id]);
 
   const handleNavigate = () => {
@@ -145,6 +172,7 @@ const BoxInfoScreen = ({ route, navigation }) => {
       setIsModalVisible(false);
       setNewComment('');
       setRating(0);
+      setHasVisited(true); // Mettre à jour l'état pour indiquer que l'utilisateur a visité la boîte
     } catch (error) {
       console.error('Erreur lors de la soumission du commentaire:', error);
     }
@@ -215,7 +243,6 @@ const BoxInfoScreen = ({ route, navigation }) => {
       console.error('Erreur lors de l\'action sur le bouton Like:', error);
     }
   };
-  
 
   const calculateAverageRating = () => {
     if (comments.length === 0) return 0;
@@ -269,12 +296,12 @@ const BoxInfoScreen = ({ route, navigation }) => {
         <View style={styles.userInfoContainer}>
           <View style={styles.userInfo}>
             <Image
-              source={{ uri: avatarUrl || 'https://picsum.photos/40/40' }}
+              source={{ uri: avatarUrl || 'https://vjwctbtqyipqsnexjukq.supabase.co/storage/v1/object/public/avatars//Empty-PhotoProfile.png' }}
               style={styles.avatar}
             />
             <View style={styles.userTexts}>
               <Text style={styles.username}>
-                {selectedBox.creator_username || 'Utilisateur inconnu'}
+                {selectedBox.creator_username || 'Utilisateur Bookineo'}
               </Text>
               <Text style={styles.date}>
                 Ajoutée le {new Date(selectedBox.created_at).toLocaleDateString()}
@@ -302,7 +329,7 @@ const BoxInfoScreen = ({ route, navigation }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>À propos de cette boîte</Text>
           <Text style={styles.description}>
-            {selectedBox.description || "Aucune description disponible."}
+            {selectedBox.description || "Cette boîte à livres n'a aucune description."}
           </Text>
         </View>
 
@@ -348,12 +375,13 @@ const BoxInfoScreen = ({ route, navigation }) => {
             <Text style={styles.primaryButtonText}>S'y rendre</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.secondaryButton}
+            style={[styles.secondaryButton, hasVisited && styles.disabledButton]}
             onPress={() => setIsModalVisible(true)}
+            disabled={hasVisited}
           >
             <MaterialCommunityIcons name="archive-marker" size={20} color="#3a7c6a" />
             <Text style={styles.secondaryButtonText} numberOfLines={1} ellipsizeMode="tail">
-              Marqué comme visité
+              {hasVisited ? "Déjà visité" : "Marqué comme visité"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -375,11 +403,11 @@ const BoxInfoScreen = ({ route, navigation }) => {
               <View key={index} style={styles.commentCard}>
                 <View style={styles.commentHeader}>
                   <Image
-                    source={{ uri: comment.visitor_id.avatar_url || 'https://picsum.photos/40/40' }}
+                    source={{ uri: comment.visitor_id.avatar_url || 'https://vjwctbtqyipqsnexjukq.supabase.co/storage/v1/object/public/avatars//Empty-PhotoProfile.png' }}
                     style={styles.commentAvatar}
                   />
                   <View style={styles.commentHeaderTexts}>
-                    <Text style={styles.commentUsername}>{comment.visitor_id?.username || 'Utilisateur inconnu'}</Text>
+                    <Text style={styles.commentUsername}>{comment.visitor_id?.username || 'Utilisateur Bookineo'}</Text>
                     <View style={styles.commentDateContainer}>
                       <Ionicons name="calendar" size={14} color="#666" />
                       <Text style={styles.commentDate}>{new Date(comment.created_at).toLocaleDateString()}</Text>
@@ -774,8 +802,10 @@ const styles = StyleSheet.create({
   },
   ratingContainer: {
     flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
     gap: 4,
+    paddingBottom: 20,
   },
   ratingText: {
     color: 'black',

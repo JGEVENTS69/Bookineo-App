@@ -1,3 +1,4 @@
+// Bookineo/src/screens/MapScreen.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
@@ -14,6 +15,7 @@ import {
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { supabase } from 'src/services/supabase';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LocateFixed, Search, MapPin, User, Clock, Star, X, HousePlus, MapPinned, Info } from 'lucide-react-native';
 import { getDistance } from 'geolib';
 
@@ -45,6 +47,8 @@ const MapScreen = ({ navigation }) => {
   const [selectedBookBox, setSelectedBookBox] = useState<BookBox | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showSearchBar, setShowSearchBar] = useState<boolean>(false);
+  const [visitCount, setVisitCount] = useState<number | null>(null);
+  const [averageRating, setAverageRating] = useState<number | null>(null);
 
   const handleBookBoxPress = async (box: BookBox) => {
     if (mapRef.current) {
@@ -70,6 +74,34 @@ const MapScreen = ({ navigation }) => {
         1000
       );
       setSelectedBookBox(box);
+      getVisitCount(box.id);
+      getAverageRating(box.id);
+    }
+  };
+
+  const getVisitCount = async (boxId: string) => {
+    const { count, error } = await supabase
+      .from('box_visits')
+      .select('id', { count: 'exact' })
+      .eq('box_id', boxId);
+
+    if (!error && count !== null) {
+      setVisitCount(count);
+    }
+  };
+
+  const getAverageRating = async (boxId: string) => {
+    const { data, error } = await supabase
+      .from('box_visits')
+      .select('rating')
+      .eq('box_id', boxId);
+
+    if (!error && data && data.length > 0) {
+      const ratings = data.map((visit) => visit.rating);
+      const average = ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+      setAverageRating(average);
+    } else {
+      setAverageRating(null); // Si aucune visite n'est trouvée, affichez null
     }
   };
 
@@ -293,13 +325,15 @@ const MapScreen = ({ navigation }) => {
               </View>
 
               <View style={styles.statItem}>
-                <Clock size={20} color="#3a7c6a" />
-                <Text style={styles.statText}>5-10 min</Text>
+                <MaterialCommunityIcons name="archive-marker-outline" size={20} color="#3a7c6a" />
+                <Text style={styles.statText}>{visitCount !== null ? `${visitCount} visites` : 'N/A'}</Text>
               </View>
 
               <View style={styles.statItem}>
                 <Star size={20} color="#3a7c6a" />
-                <Text style={styles.statText}>4.2 (33)</Text>
+                <Text style={styles.statText}>
+                  {averageRating !== null ? `${averageRating.toFixed(1)}/5` : `${visitCount}/5`}
+                </Text>
               </View>
             </View>
 
