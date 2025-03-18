@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+// Bookineo/src/screens/ProfileScreen.tsx
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +9,6 @@ import {
   SafeAreaView,
   Dimensions,
   StyleSheet,
-  StatusBar,
   Animated,
   RefreshControl,
   Alert,
@@ -16,31 +16,18 @@ import {
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../services/supabase';
 import { useNavigation } from '@react-navigation/native';
-import { Swipeable } from 'react-native-gesture-handler';
 
 const { width } = Dimensions.get('window');
 const HEADER_HEIGHT = 200;
 
 const ProfileScreen = () => {
-  const [activeTab, setActiveTab] = useState('added');
+  const [activeTab, setActiveTab] = useState('favorites');
   const [user, setUser] = useState(null);
-  const [addedBoxes, setAddedBoxes] = useState([]);
+  const [favoriteBoxes, setFavoriteBoxes] = useState([]);
   const [visitedBoxes, setVisitedBoxes] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const scrollY = new Animated.Value(0);
   const navigation = useNavigation();
-  
-  // Référence pour garder une trace de la swipeable ouverte
-  const swipeableRefs = useRef([]);
-
-  // Fermer tous les swipeables ouverts sauf celui actif
-  const closeOtherSwipeables = (index) => {
-    swipeableRefs.current.forEach((ref, i) => {
-      if (ref && i !== index) {
-        ref.close();
-      }
-    });
-  };
 
   const fetchUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -58,15 +45,25 @@ const ProfileScreen = () => {
     }
   };
 
-  const fetchAddedBoxes = async () => {
+  const fetchFavoriteBoxes = async () => {
     const { data, error } = await supabase
-      .from('book_boxes')
-      .select('*')
-      .eq('created_id', user.id);
+      .from('favorites')
+      .select('box_id')
+      .eq('user_id', user.id);
     if (error) {
       console.error(error);
     } else {
-      setAddedBoxes(data);
+      const boxIds = data.map(favorite => favorite.box_id);
+      const { data: bookBoxesData, error: bookBoxesError } = await supabase
+        .from('book_boxes')
+        .select('*')
+        .in('id', boxIds);
+
+      if (bookBoxesError) {
+        console.error(bookBoxesError);
+      } else {
+        setFavoriteBoxes(bookBoxesData);
+      }
     }
   };
 
@@ -103,14 +100,14 @@ const ProfileScreen = () => {
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchUser().then(() => {
-      fetchAddedBoxes();
+      fetchFavoriteBoxes();
       fetchVisitedBoxes();
     }).finally(() => setRefreshing(false));
   }, []);
 
   useEffect(() => {
     fetchUser().then(() => {
-      fetchAddedBoxes();
+      fetchFavoriteBoxes();
       fetchVisitedBoxes();
     });
   }, [user]);
@@ -127,36 +124,37 @@ const ProfileScreen = () => {
     extrapolate: 'clamp'
   });
 
-  const handleDeleteBox = async (boxId) => {
+  const handleRemoveFromFavorites = async (boxId) => {
     Alert.alert(
       "Confirmation",
-      "Êtes-vous sûr de vouloir supprimer cette boîte à livres ?",
+      "Êtes-vous sûr de vouloir retirer cette boîte à livres de vos favoris ?",
       [
         {
           text: "Annuler",
           style: "cancel"
         },
         {
-          text: "Supprimer",
+          text: "Retirer",
           style: "destructive",
           onPress: async () => {
             try {
               const { error } = await supabase
-                .from('book_boxes')
+                .from('favorites')
                 .delete()
-                .eq('id', boxId);
-              
+                .eq('box_id', boxId)
+                .eq('user_id', user.id);
+
               if (error) {
-                console.error("Erreur lors de la suppression:", error);
-                Alert.alert("Erreur", "Impossible de supprimer cette boîte à livres.");
+                console.error("Erreur lors du retrait des favoris:", error);
+                Alert.alert("Erreur", "Impossible de retirer cette boîte à livres de vos favoris.");
               } else {
-                // Mettre à jour la liste des boîtes après suppression
-                setAddedBoxes(prevBoxes => prevBoxes.filter(box => box.id !== boxId));
-                Alert.alert("Succès", "La boîte à livres a été supprimée avec succès.");
+                // Mettre à jour la liste des boîtes après retrait
+                setFavoriteBoxes(prevBoxes => prevBoxes.filter(box => box.id !== boxId));
+                Alert.alert("Succès", "La boîte à livres a été retirée de vos favoris avec succès.");
               }
             } catch (error) {
-              console.error("Exception lors de la suppression:", error);
-              Alert.alert("Erreur", "Une erreur s'est produite lors de la suppression.");
+              console.error("Exception lors du retrait des favoris:", error);
+              Alert.alert("Erreur", "Une erreur s'est produite lors du retrait des favoris.");
             }
           }
         }
@@ -164,107 +162,29 @@ const ProfileScreen = () => {
     );
   };
 
-  const handleEditBox = (bookBox) => {
-    navigation.navigate('EditBookBox', { bookBox });
-  };
-
-  // Rendu des actions de swipe à droite (supprimer)
-  const renderRightActions = (bookBox, progress) => {
-    const trans = progress.interpolate({
-      inputRange: [0, 1],
-      outputRange: [100, 0],
-    });
-    const opacity = progress.interpolate({
-      inputRange: [0, 0.5, 1],
-      outputRange: [0, 0.5, 1],
-    });
-  
-    return (
-      <View style={styles.swipeActionsContainer}>
-        <Animated.View
-          style={[
-            styles.deleteAction,
-            {
-              transform: [{ translateX: trans }],
-              opacity,
-            },
-          ]}
-        >
-          <TouchableOpacity
-            onPress={() => handleDeleteBox(bookBox.id)}
-            style={styles.actionButton}
-          >
-            <Ionicons name="trash-outline" size={28} color="#D8596E" />
-            <Text style={styles.actionText}>Supprimer</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </View>
-    );
-  };
-  
-  // Rendu des actions de swipe à gauche (modifier)
-  const renderLeftActions = (bookBox, progress) => {
-    const trans = progress.interpolate({
-      inputRange: [0, 1],
-      outputRange: [-100, 0],
-    });
-    const opacity = progress.interpolate({
-      inputRange: [0, 0.5, 1],
-      outputRange: [0, 0.5, 1],
-    });
-  
-    return (
-      <View style={styles.swipeActionsContainer}>
-        <Animated.View
-          style={[
-            styles.editAction,
-            {
-              transform: [{ translateX: trans }],
-              opacity,
-            },
-          ]}
-        >
-          <TouchableOpacity
-            onPress={() => handleEditBox(bookBox)}
-            style={styles.actionButton}
-          >
-            <Ionicons name="create-outline" size={28} color="#3A7C6A" />
-            <Text style={styles.actionText2}>Modifier</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </View>
-    );
-  };
-  
-
   const renderBookBox = (bookBox, index) => (
-    <Swipeable
-  ref={ref => swipeableRefs.current[index] = ref}
-  renderRightActions={(progress) => renderRightActions(bookBox, progress)}
-  renderLeftActions={(progress) => renderLeftActions(bookBox, progress)}
-  onSwipeableOpen={() => closeOtherSwipeables(index)}
-  friction={1.5}
-  overshootFriction={8}
-  leftThreshold={80}
-  rightThreshold={80}
->
-  <View style={styles.bookBox}>
-        <Image
-          source={{ uri: bookBox.photo_url || 'https://via.placeholder.com/80' }}
-          style={styles.bookBoxImage}
-        />
-        <View style={styles.bookBoxContent}>
-          <Text style={styles.bookBoxTitle}>{bookBox.name}</Text>
-          <Text style={styles.bookBoxAddTime}>Ajoutée le {new Date(bookBox.created_at).toLocaleDateString()}</Text>
-          <View style={styles.statusContainer}>
-            <View style={bookBox.status ? styles.statusDotAvailable : styles.statusDotUnavailable} />
-            <Text style={bookBox.status ? styles.statusTextAvailable : styles.statusTextUnavailable}>
-              {bookBox.status ? 'Disponible' : 'Indisponible'}
-            </Text>
-          </View>
+    <View style={styles.bookBox}>
+      <Image
+        source={{ uri: bookBox.photo_url || 'https://via.placeholder.com/80' }}
+        style={styles.bookBoxImage}
+      />
+      <View style={styles.bookBoxContent}>
+        <Text style={styles.bookBoxTitle}>{bookBox.name}</Text>
+        <Text style={styles.bookBoxAddTime}>Ajoutée le {new Date(bookBox.created_at).toLocaleDateString()}</Text>
+        <View style={styles.statusContainer}>
+          <View style={bookBox.status ? styles.statusDotAvailable : styles.statusDotUnavailable} />
+          <Text style={bookBox.status ? styles.statusTextAvailable : styles.statusTextUnavailable}>
+            {bookBox.status ? 'Disponible' : 'Indisponible'}
+          </Text>
         </View>
       </View>
-    </Swipeable>
+      <TouchableOpacity
+        onPress={() => handleRemoveFromFavorites(bookBox.id)}
+        style={styles.deleteIcon}
+      >
+        <Ionicons name="trash-outline" size={28} color="#D8596E" />
+      </TouchableOpacity>
+    </View>
   );
 
   const BookVisit = ({ bookBox, index }) => (
@@ -356,11 +276,11 @@ const ProfileScreen = () => {
 
           <View style={styles.stats}>
             <TouchableOpacity
-              style={[styles.statItem, activeTab === 'added' && styles.activeStatItem]}
-              onPress={() => setActiveTab('added')}
+              style={[styles.statItem, activeTab === 'favorites' && styles.activeStatItem]}
+              onPress={() => setActiveTab('favorites')}
             >
-              <Text style={[styles.statNumber, activeTab === 'added' && styles.activeStatText]}>{addedBoxes.length}</Text>
-              <Text style={[styles.statLabel, activeTab === 'added' && styles.activeStatText]}>Boîtes ajoutées</Text>
+              <Text style={[styles.statNumber, activeTab === 'favorites' && styles.activeStatText]}>{favoriteBoxes.length}</Text>
+              <Text style={[styles.statLabel, activeTab === 'favorites' && styles.activeStatText]}>Boîtes favoris</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.statItem, activeTab === 'visited' && styles.activeStatItem]}
@@ -373,24 +293,18 @@ const ProfileScreen = () => {
 
           <View style={styles.booksList}>
             <Text style={styles.sectionTitle}>
-              {activeTab === 'added' ? 'Vos boîtes à livres ajoutées' : 'Vos boîtes à livres visitées'}
+              {activeTab === 'favorites' ? 'Vos boîtes à livres favoris' : 'Vos boîtes à livres visitées'}
             </Text>
-            
-            <View style={styles.instructions}>
-              <Text style={styles.instructionsText}>
-                {activeTab === 'added' ? '"Glissez vers la gauche pour modifier votre boîte à livres, ou vers la droite pour la supprimer."' : ''}
-              </Text>
-            </View>
-            
-            {activeTab === 'added' ? (
-              addedBoxes.length > 0 ? (
-                addedBoxes.map((bookBox, index) => (
+
+            {activeTab === 'favorites' ? (
+              favoriteBoxes.length > 0 ? (
+                favoriteBoxes.map((bookBox, index) => (
                   <View key={index}>
                     {renderBookBox(bookBox, index)}
                   </View>
                 ))
               ) : (
-                <Text style={styles.emptyStateText}>Vous n'avez pas encore ajouté de boîtes à livres.</Text>
+                <Text style={styles.emptyStateText}>Vous n'avez pas encore ajouté de boîtes à livres en favoris.</Text>
               )
             ) : (
               visitedBoxes.length > 0 ? (
@@ -413,7 +327,7 @@ const ProfileScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: 'white',
   },
   header: {
     position: 'absolute',
@@ -548,6 +462,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
+    alignItems: 'center',
   },
   bookBoxImage: {
     width: 80,
@@ -613,44 +528,8 @@ const styles = StyleSheet.create({
     color: 'gray',
     fontWeight: 'bold',
   },
-  // Styles pour les actions de swipe
-  swipeActionsContainer: {
-    width: 100,
-    height: '100%',
-  },
-  deleteAction: {
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 100,
-    borderTopRightRadius: 16,
-    borderBottomRightRadius: 16,
-  },
-  editAction: {
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 100,
-    borderTopLeftRadius: 16,
-    borderBottomLeftRadius: 16,
-  },
-  actionButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    flex: 1,
-    width: '100%',
-  },
-  actionText: {
-    color: '#D8596E',
-    fontSize: 13,
-    fontWeight: '600',
-    marginTop: 6,
-  },
-  actionText2: {
-    color: '#3A7C6A',
-    fontSize: 13,
-    fontWeight: '600',
-    marginTop: 6,
+  deleteIcon: {
+    marginLeft: 12,
   },
   bookBoxHeader: {
     flexDirection: 'row',

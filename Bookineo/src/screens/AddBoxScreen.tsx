@@ -1,3 +1,5 @@
+// Bookineo/src/screens/AddBoxScreen.tsx
+
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -16,7 +18,7 @@ import * as ImagePicker from 'expo-image-picker';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { supabase } from '../services/supabase';
 import { decode } from 'base64-arraybuffer';
-import { Camera, X } from 'lucide-react-native';
+import { Camera, X, ArrowLeft } from 'lucide-react-native';
 import * as Location from 'expo-location';
 
 interface BookBox {
@@ -25,6 +27,7 @@ interface BookBox {
   photo_url: string;
   latitude: number;
   longitude: number;
+  size: string;
 }
 
 const { width } = Dimensions.get('window');
@@ -37,6 +40,7 @@ const AddBoxScreen = ({ navigation }) => {
     photo_url: '',
     latitude: 48.8566,
     longitude: 2.3522,
+    size: '',
   });
   const [image, setImage] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
@@ -101,14 +105,14 @@ const AddBoxScreen = ({ navigation }) => {
   const handleSubmit = async () => {
     try {
       console.log('Current userId:', userId);
-      
+
       if (!userId) {
         console.log('No user ID found');
         Alert.alert('Erreur', 'Utilisateur non authentifié');
         return;
       }
 
-      if (!bookBox.name || !bookBox.description || !image) {
+      if (!bookBox.name || !bookBox.description || !image || !bookBox.size) {
         Alert.alert('Champs manquants', 'Merci de remplir tous les champs requis');
         return;
       }
@@ -172,18 +176,39 @@ const AddBoxScreen = ({ navigation }) => {
     }
   };
 
+  const handleCancel = () => {
+    setBookBox({
+      name: '',
+      description: '',
+      photo_url: '',
+      latitude: 48.8566,
+      longitude: 2.3522,
+      size: '',
+    });
+    setImage(null);
+    setStep(1);
+    navigation.navigate('Map');
+  };
+
   const renderStepIndicator = () => (
-    <View style={styles.stepIndicator}>
-      {[1, 2].map((num) => (
-        <View
-          key={num}
-          style={[
-            styles.stepDot,
-            step === num && styles.activeStepDot,
-            step > num && styles.completedStepDot,
-          ]}
-        />
-      ))}
+    <View style={styles.stepIndicatorContainer}>
+      {step > 1 && (
+        <TouchableOpacity style={styles.backButton} onPress={() => setStep(step - 1)}>
+          <ArrowLeft size={24} color="#3A7C6A" />
+        </TouchableOpacity>
+      )}
+      <View style={styles.stepIndicator}>
+        {[1, 2, 3].map((num) => (
+          <View
+            key={num}
+            style={[
+              styles.stepDot,
+              step === num && styles.activeStepDot,
+              step > num && styles.completedStepDot,
+            ]}
+          />
+        ))}
+      </View>
     </View>
   );
 
@@ -216,34 +241,59 @@ const AddBoxScreen = ({ navigation }) => {
         />
       </View>
 
-      <TouchableOpacity
-        style={[styles.photoContainer, image && styles.photoContainerWithImage]}
-        onPress={pickImage}
-      >
-        {image ? (
-          <View style={styles.imageWrapper}>
-            <Image
-              source={{ uri: `data:image/jpeg;base64,${image}` }}
-              style={styles.preview}
-            />
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Taille de votre boîte à livres</Text>
+        <View style={styles.radioGroup}>
+          {['Petite', 'Moyenne', 'Grande'].map((size) => (
             <TouchableOpacity
-              style={styles.removeButton}
-              onPress={() => setImage(null)}
+              key={size}
+              style={styles.radioButton}
+              onPress={() => setBookBox({ ...bookBox, size })}
             >
-              <X size={20} color="#FFF" />
+              <View style={styles.radioCircle}>
+                {bookBox.size === size && <View style={styles.selectedRb} />}
+              </View>
+              <Text style={styles.radioText}>{size}</Text>
             </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.photoPlaceholder}>
-            <Camera size={32} color="#A0AEC0" />
-            <Text style={styles.photoText}>Ajouter une photo</Text>
-          </View>
-        )}
-      </TouchableOpacity>
+          ))}
+        </View>
+      </View>
     </KeyboardAvoidingView>
   );
 
   const renderStep2 = () => (
+    <View style={styles.stepContainer}>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Photo de la boîte à livres</Text>
+        <TouchableOpacity
+          style={[styles.photoContainer, image && styles.photoContainerWithImage]}
+          onPress={pickImage}
+        >
+          {image ? (
+            <View style={styles.imageWrapper}>
+              <Image
+                source={{ uri: `data:image/jpeg;base64,${image}` }}
+                style={styles.preview}
+              />
+              <TouchableOpacity
+                style={styles.removeButton}
+                onPress={() => setImage(null)}
+              >
+                <X size={20} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.photoPlaceholder}>
+              <Camera size={32} color="#A0AEC0" />
+              <Text style={styles.photoText}>Ajouter une photo</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderStep3 = () => (
     <View style={styles.stepContainer}>
       <Text style={styles.label}>Emplacement de la boîte</Text>
       <View style={styles.mapContainer}>
@@ -270,7 +320,7 @@ const AddBoxScreen = ({ navigation }) => {
               longitude: bookBox.longitude,
             }}
           >
-            <Image 
+            <Image
               source={require('../assets/icons/book-marker.png')}
               style={styles.customMarker}
             />
@@ -286,33 +336,34 @@ const AddBoxScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>
-          {step === 1 ? 'Informations' : 'Localisation'}
-        </Text>
         {renderStepIndicator()}
-        {step === 1 ? renderStep1() : renderStep2()}
-        
+        {step === 1 ? renderStep1() : step === 2 ? renderStep2() : renderStep3()}
+
         <TouchableOpacity
           style={[
             styles.mainButton,
-            (!bookBox.name || !bookBox.description || !image) && styles.disabledButton
+            (!bookBox.name || !bookBox.description || !bookBox.size || (step === 2 && !image)) && styles.disabledButton
           ]}
-          onPress={step === 1 ? () => setStep(2) : handleSubmit}
-          disabled={step === 1 ? (!bookBox.name || !bookBox.description || !image) : false}
+          onPress={() => {
+            if (step < 3) {
+              setStep(step + 1);
+            } else {
+              handleSubmit();
+            }
+          }}
+          disabled={!bookBox.name || !bookBox.description || !bookBox.size || (step === 2 && !image)}
         >
           <Text style={styles.mainButtonText}>
-            {step === 1 ? 'Suivant' : 'Ajouter la boîte'}
+            {step < 3 ? 'Suivant' : 'Ajouter la boîte à livres'}
           </Text>
         </TouchableOpacity>
 
-        {step === 2 && (
-          <TouchableOpacity
-            style={styles.backTextButton}
-            onPress={() => setStep(1)}
-          >
-            <Text style={styles.backButtonText}>Retour aux informations</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          style={styles.cancelButton}
+          onPress={handleCancel}
+        >
+          <Text style={styles.cancelButtonText}>Annuler</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -326,16 +377,19 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#2D3748',
-    marginBottom: 24,
+  stepIndicatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 32,
+  },
+  backButton: {
+    position: 'absolute',
+    left: 0,
   },
   stepIndicator: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 32,
   },
   stepDot: {
     width: 8,
@@ -345,11 +399,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   activeStepDot: {
-    backgroundColor: '#4299E1',
+    backgroundColor: '#3A7C6A',
     width: 24,
   },
   completedStepDot: {
-    backgroundColor: '#48BB78',
+    backgroundColor: '#3A7C6A',
   },
   stepContainer: {
     flex: 1,
@@ -433,7 +487,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   mainButton: {
-    backgroundColor: '#4299E1',
+    backgroundColor: '#3A7C6A',
     padding: 16,
     borderRadius: 12,
     marginTop: 24,
@@ -456,6 +510,45 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     backgroundColor: '#A0AEC0',
+  },
+  radioGroup: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 10,
+  },
+  radioButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  radioCircle: {
+    height: 20,
+    width: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#3A7C6A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectedRb: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#3A7C6A',
+  },
+  radioText: {
+    marginLeft: 10,
+    fontSize: 16,
+    color: '#4A5568',
+  },
+  cancelButton: {
+    marginTop: 12,
+    marginBottom: 24,
+  },
+  cancelButtonText: {
+    color: '#D8596E',
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
