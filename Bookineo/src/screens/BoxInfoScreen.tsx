@@ -1,5 +1,3 @@
-// Bookineo/src/screens/BoxInfoScreen.tsx
-
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -17,7 +15,7 @@ import {
   TextInput,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
 import { supabase } from 'src/services/supabase'; // Importe Supabase
 import Toast from 'react-native-toast-message';
@@ -333,6 +331,16 @@ const BoxInfoScreen = ({ route, navigation }) => {
             </View>
             <Text style={styles.title}>{selectedBox.name}</Text>
           </View>
+          <TouchableOpacity
+            style={styles.favoriteButton}
+            onPress={handleLikePress}
+          >
+            <Ionicons
+              name={isLiked ? "heart" : "heart-outline"}
+              size={24}
+              color={isLiked ? "#FF4B4B" : "#666"}
+            />
+          </TouchableOpacity>
         </LinearGradient>
       </View>
 
@@ -355,19 +363,13 @@ const BoxInfoScreen = ({ route, navigation }) => {
             </View>
           </View>
           <View style={styles.actions}>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={handleLikePress}
-            >
-              <Ionicons
-                name={isLiked ? "heart" : "heart-outline"}
-                size={24}
-                color={isLiked ? "#FF4B4B" : "#666"}
-              />
-            </TouchableOpacity>
             <View style={styles.statusIndicator}>
-              <View style={[styles.statusDot, { backgroundColor: boxStatus ? 'green' : 'red' }]} />
-              <Text style={styles.statusText}>{boxStatus ? 'Disponible' : 'Indisponible'}</Text>
+              <MaterialCommunityIcons
+                name={boxSize === 'Petite' ? 'signal-cellular-1' : boxSize === 'Moyenne' ? 'signal-cellular-2' : 'signal-cellular-3'}
+                size={32}
+                color={boxSize === 'Petite' ? '#3A7C6A' : boxSize === 'Moyenne' ? '#3A7C6A' : '#3A7C6A'}
+              />
+              <Text style={styles.statusText}>{boxSize}</Text>
             </View>
           </View>
         </View>
@@ -375,9 +377,8 @@ const BoxInfoScreen = ({ route, navigation }) => {
         {/* Description */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>À propos de cette boîte</Text>
-          <Text style={styles.sizeText}>Taille de la boîte à livres: {boxSize}</Text>
           <Text style={styles.description}>
-            {selectedBox.description || "Cette boîte à livres n'a aucune description."}
+            "{selectedBox.description || "Cette boîte à livres n'a aucune description."}"
           </Text>
         </View>
 
@@ -506,7 +507,7 @@ const BoxInfoScreen = ({ route, navigation }) => {
             onChangeText={setNewComment}
             multiline
           />
-          <View style={styles.modalButtons}>
+            <View style={styles.modalButtons}>
             <TouchableOpacity
               style={styles.cancelButton}
               onPress={() => setIsModalVisible(false)}
@@ -528,359 +529,371 @@ const BoxInfoScreen = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-container: {
-  flex: 1,
-  backgroundColor: 'white',
-  paddingHorizontal: 10,
-},
-loadingContainer: {
-  flex: 1,
-  justifyContent: 'center',
-  alignItems: 'center',
-  backgroundColor: '#F5F5F5',
-},
-errorContainer: {
-  flex: 1,
-  justifyContent: 'center',
-  alignItems: 'center',
-  padding: 20,
-  backgroundColor: '#F5F5F5',
-},
-errorText: {
-  fontSize: 18,
-  fontWeight: '600',
-  color: '#333',
-  marginBottom: 16,
-},
-errorButton: {
-  paddingVertical: 12,
-  paddingHorizontal: 24,
-  backgroundColor: '#6C5CE7',
-  borderRadius: 12,
-},
-errorButtonText: {
-  color: 'white',
-  fontSize: 16,
-  fontWeight: '600',
-},
-headerContainer: {
-  height: SCREEN_HEIGHT * 0.6,
-  width: SCREEN_WIDTH,
-  overflow: 'hidden',
-},
-headerImage: {
-  width: '100%',
-  height: '100%',
-},
-headerOverlay: {
-  position: 'absolute',
-  bottom: 0,
-  left: 0,
-  right: 0,
-  padding: 20,
-  paddingBottom: 40,
-},
-headerContent: {
-  gap: 10,
-},
-bookCountBadge: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  backgroundColor: 'rgba(245, 245, 245, 1)',
-  paddingVertical: 6,
-  paddingHorizontal: 12,
-  borderRadius: 20,
-  alignSelf: 'flex-start',
-  gap: 6,
-},
-bookCountText: {
-  color: '#3a7c6a',
-  fontSize: 14,
-  fontWeight: '600',
-},
-title: {
-  fontSize: 32,
-  fontWeight: 'bold',
-  color: 'white',
-},
-content: {
-  flex: 1,
-  backgroundColor: 'white',
-  borderTopLeftRadius: 24,
-  borderTopRightRadius: 24,
-  marginTop: -24,
-  padding: 20,
-},
-userInfoContainer: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: 24,
-},
-userInfo: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 12,
-},
-avatar: {
-  width: 40,
-  height: 40,
-  borderRadius: 20,
-},
-userTexts: {
-  gap: 4,
-},
-username: {
-  fontSize: 16,
-  fontWeight: '600',
-  color: '#333',
-},
-date: {
-  fontSize: 13,
-  color: '#666',
-},
-actions: {
-  flexDirection: 'row',
-  gap: 12,
-},
-actionButton: {
-  width: 44,
-  height: 44,
-  borderRadius: 22,
-  backgroundColor: '#F5F5F5',
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-statusIndicator: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 8,
-},
-statusDot: {
-  width: 12,
-  height: 12,
-  borderRadius: 6,
-},
-statusText: {
-  fontSize: 14,
-  color: '#666',
-},
-section: {
-  marginBottom: 24,
-},
-sectionTitle: {
-  fontSize: 18,
-  fontWeight: '600',
-  color: '#333',
-  marginBottom: 12,
-},
-description: {
-  fontSize: 15,
-  lineHeight: 22,
-  color: '#666',
-},
-sizeText: {
-  fontSize: 13,
-  color: '#666',
-  fontWeight: '700',
-  fontStyle: 'italic',
-  marginBottom: 12,
-},
-mapPreview: {
-  height: 200,
-  backgroundColor: '#F5F5F5',
-  borderRadius: 16,
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-buttonGroup: {
-  flexDirection: 'column',
-  gap: 10,
-  marginBottom: 32,
-},
-primaryButton: {
-  flex: 1,
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  backgroundColor: '#3a7c6a',
-  paddingVertical: 16,
-  paddingHorizontal: 20,
-  borderRadius: 16,
-  gap: 8,
-},
-primaryButtonText: {
-  color: 'white',
-  fontSize: 16,
-  fontWeight: '600',
-},
-secondaryButton: {
-  flex: 1,
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  backgroundColor: '#F5F5F5',
-  paddingVertical: 16,
-  paddingHorizontal: 16,
-  borderRadius: 16,
-  gap: 8,
-},
-secondaryButtonText: {
-  color: '#3a7c6a',
-  fontSize: 16,
-  fontWeight: '600',
-  flexShrink: 1,
-},
-map: {
-  width: '100%',
-  height: '100%',
-},
-markerContainer: {
-  alignItems: 'center',
-  justifyContent: 'center',
-},
-markerImage: {
-  width: 50,
-  height: 50,
-  resizeMode: 'contain',
-},
-commentCard: {
-  marginBottom: 16,
-  padding: 16,
-  backgroundColor: '#FFFFFF',
-  borderRadius: 12,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.1,
-  shadowRadius: 4,
-  elevation: 3,
-},
-commentHeader: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginBottom: 20,
-},
-commentAvatar: {
-  width: 32,
-  height: 32,
-  borderRadius: 16,
-  marginRight: 8,
-},
-commentHeaderTexts: {
-  flex: 1,
-},
-commentUsername: {
-  fontSize: 14,
-  fontWeight: '600',
-  color: '#333',
-},
-commentDateContainer: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginTop: 4,
-},
-commentDate: {
-  fontSize: 12,
-  color: '#666',
-  marginLeft: 4,
-},
-commentText: {
-  fontSize: 14,
-  color: '#666',
-  marginBottom: 8,
-},
-noCommentsText: {
-  fontSize: 14,
-  color: '#666',
-  textAlign: 'center',
-},
-modalOverlay: {
-  flex: 1,
-  justifyContent: 'center',
-  alignItems: 'center',
-  backgroundColor: 'rgba(0, 0, 0, 0.5)',
-},
-modalContainer: {
-  width: '90%',
-  backgroundColor: 'white',
-  borderRadius: 16,
-  padding: 20,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.25,
-  shadowRadius: 4,
-  elevation: 5,
-},
-modalTitle: {
-  fontSize: 20,
-  fontWeight: '600',
-  color: '#333',
-  marginBottom: 16,
-  textAlign: 'center',
-},
-commentLabel: {
-  fontSize: 14,
-  color: '#666',
-  marginBottom: 8,
-},
-commentInput: {
-  height: 100,
-  borderColor: '#CCC',
-  borderWidth: 1,
-  borderRadius: 8,
-  padding: 12,
-  marginBottom: 16,
-  fontSize: 14,
-  color: '#333',
-},
-modalButtons: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-},
-cancelButton: {
-  flex: 1,
-  backgroundColor: '#F5F5F5',
-  paddingVertical: 12,
-  borderRadius: 8,
-  alignItems: 'center',
-  marginRight: 8,
-},
-cancelButtonText: {
-  color: '#333',
-  fontSize: 16,
-  fontWeight: '600',
-},
-saveButton: {
-  flex: 1,
-  backgroundColor: '#3a7c6a',
-  paddingVertical: 12,
-  borderRadius: 8,
-  alignItems: 'center',
-  marginLeft: 8,
-},
-saveButtonText: {
-  color: 'white',
-  fontSize: 16,
-  fontWeight: '600',
-},
-sectionHeader: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  marginBottom: 12,
-},
-ratingContainer: {
-  flexDirection: 'row',
-  justifyContent: 'center',
-  alignItems: 'center',
-  gap: 4,
-  paddingBottom: 20,
-},
-ratingText: {
-  color: 'black',
-  fontSize: 14,
-  fontWeight: '600',
-},
+  container: {
+    flex: 1,
+    backgroundColor: 'white',
+    paddingHorizontal: 10,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#F5F5F5',
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+  },
+  errorButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    backgroundColor: '#6C5CE7',
+    borderRadius: 12,
+  },
+  errorButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  headerContainer: {
+    height: SCREEN_HEIGHT * 0.6,
+    width: SCREEN_WIDTH,
+    overflow: 'hidden',
+  },
+  headerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  headerOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 20,
+    paddingBottom: 40,
+  },
+  headerContent: {
+    gap: 10,
+  },
+  bookCountBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(245, 245, 245, 1)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    gap: 6,
+  },
+  bookCountText: {
+    color: '#3a7c6a',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  favoriteButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  content: {
+    flex: 1,
+    backgroundColor: 'white',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    marginTop: -24,
+    padding: 20,
+  },
+  userInfoContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  userTexts: {
+    gap: 4,
+  },
+  username: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  date: {
+    fontSize: 13,
+    color: '#666',
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  actionButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statusIndicator: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 4,
+  },
+  statusDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  statusText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  description: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#666',
+  },
+  sizeText: {
+    fontSize: 13,
+    color: '#666',
+    fontWeight: '700',
+    fontStyle: 'italic',
+    marginBottom: 12,
+  },
+  mapPreview: {
+    height: 200,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  buttonGroup: {
+    flexDirection: 'column',
+    gap: 10,
+    marginBottom: 32,
+  },
+  primaryButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#3a7c6a',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    gap: 8,
+  },
+  primaryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  secondaryButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F5F5F5',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    gap: 8,
+  },
+  secondaryButtonText: {
+    color: '#3a7c6a',
+    fontSize: 16,
+    fontWeight: '600',
+    flexShrink: 1,
+  },
+  map: {
+    width: '100%',
+    height: '100%',
+  },
+  markerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  markerImage: {
+    width: 50,
+    height: 50,
+    resizeMode: 'contain',
+  },
+  commentCard: {
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  commentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  commentAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 8,
+  },
+  commentHeaderTexts: {
+    flex: 1,
+  },
+  commentUsername: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  commentDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  commentDate: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 4,
+  },
+  commentText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  noCommentsText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContainer: {
+    width: '90%',
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  commentLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  commentInput: {
+    height: 100,
+    borderColor: '#CCC',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    fontSize: 14,
+    color: '#333',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  cancelButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: '#3a7c6a',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  saveButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 4,
+    paddingBottom: 20,
+  },
+  ratingText: {
+    color: 'black',
+    fontSize: 14,
+    fontWeight: '600',
+  },
 });
 
 export default BoxInfoScreen;

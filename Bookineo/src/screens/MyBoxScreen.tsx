@@ -131,7 +131,7 @@ const MyBoxScreen: React.FC = () => {
   };
 
   const handleEditBox = (bookBox) => {
-    navigation.navigate('EditBookBox', { bookBox });
+    navigation.navigate('UpdateBox', { boxId: bookBox.id });
   };
 
   const renderRightActions = (bookBox, progress) => {
@@ -219,12 +219,6 @@ const MyBoxScreen: React.FC = () => {
         <View style={styles.bookBoxContent}>
           <Text style={styles.bookBoxTitle}>{bookBox.name}</Text>
           <Text style={styles.bookBoxAddTime}>Ajoutée le {new Date(bookBox.created_at).toLocaleDateString()}</Text>
-          <View style={styles.statusContainer}>
-            <View style={bookBox.status ? styles.statusDotAvailable : styles.statusDotUnavailable} />
-            <Text style={bookBox.status ? styles.statusTextAvailable : styles.statusTextUnavailable}>
-              {bookBox.status ? 'Disponible' : 'Indisponible'}
-            </Text>
-          </View>
         </View>
       </View>
     </Swipeable>
@@ -342,10 +336,13 @@ const styles = StyleSheet.create({
     shadowOffset: {
       width: 0,
       height: 2,
+  
     },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
+    borderColor: '#E5E5E5',
+    borderWidth: 1,
   },
   bookBoxImage: {
     width: 80,

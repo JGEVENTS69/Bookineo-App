@@ -171,18 +171,12 @@ const ProfileScreen = () => {
       <View style={styles.bookBoxContent}>
         <Text style={styles.bookBoxTitle}>{bookBox.name}</Text>
         <Text style={styles.bookBoxAddTime}>Ajoutée le {new Date(bookBox.created_at).toLocaleDateString()}</Text>
-        <View style={styles.statusContainer}>
-          <View style={bookBox.status ? styles.statusDotAvailable : styles.statusDotUnavailable} />
-          <Text style={bookBox.status ? styles.statusTextAvailable : styles.statusTextUnavailable}>
-            {bookBox.status ? 'Disponible' : 'Indisponible'}
-          </Text>
-        </View>
       </View>
       <TouchableOpacity
         onPress={() => handleRemoveFromFavorites(bookBox.id)}
         style={styles.deleteIcon}
       >
-        <Ionicons name="trash-outline" size={28} color="#D8596E" />
+        <Ionicons name="heart-dislike-outline" size={28} color="#D8596E" />
       </TouchableOpacity>
     </View>
   );
@@ -210,12 +204,6 @@ const ProfileScreen = () => {
         <Text style={styles.bookBoxAddTime}>
           Visitée le {bookBox.visited_at ? new Date(bookBox.visited_at).toLocaleDateString() : 'Date inconnue'}
         </Text>
-        <View style={styles.statusContainer}>
-          <View style={bookBox.status ? styles.statusDotAvailable : styles.statusDotUnavailable} />
-          <Text style={bookBox.status ? styles.statusTextAvailable : styles.statusTextUnavailable}>
-            {bookBox.status ? 'Disponible' : 'Indisponible'}
-          </Text>
-        </View>
       </View>
     </TouchableOpacity>
   );

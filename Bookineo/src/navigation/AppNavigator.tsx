@@ -6,6 +6,8 @@ import UsernameScreen from '@screens/Auth/UsernameScreen';
 import TabNavigator from '../navigation/TabNavigator';
 import BoxInfoScreen from '@screens/BoxInfoScreen';
 import EditProfile from '@screens/EditProfile';
+import UpdateBoxScreen from '@screens/UpdateBoxScreen';
+
 
 
 
@@ -20,6 +22,7 @@ const AppNavigator = () => {
       <Stack.Screen name="Main" component={TabNavigator} />
       <Stack.Screen name="BoxInfoScreen" component={BoxInfoScreen} />
       <Stack.Screen name="EditProfile" component={EditProfile} />
+      <Stack.Screen name="UpdateBox" component={UpdateBoxScreen} />
     </Stack.Navigator>
 
   );

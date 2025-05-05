@@ -11,6 +11,7 @@ import CustomTabBarButton from '../components/CustomTabBarButton';
 import MyBoxScreen from '@screens/MyBoxScreen';
 import ProfileScreen from '@screens/ProfileScreen';
 import EditProfile from '@screens/EditProfile';
+import UpdateBoxScreen from '@screens/UpdateBoxScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -45,6 +46,26 @@ const MapStack = ({ navigation }) => {
   );
 };
 
+const UpdateStack = () => {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="MyBoxScreen"
+        component={MyBoxScreen}
+        options={{ title: 'Mes Boîtes à Livres', headerShown: true }}
+      />
+      <Stack.Screen
+        name="UpdateBox"
+        component={UpdateBoxScreen}
+        options={{ title: 'Modifier la boîte à livres', 
+          headerShown: true,
+          headerBackTitle: 'Retour',
+         }}
+      />
+    </Stack.Navigator>
+  );
+};
+
 const TabNavigator = () => {
   return (
     <Tab.Navigator
@@ -72,7 +93,7 @@ const TabNavigator = () => {
       })}
     >
       <Tab.Screen name="Map" component={MapStack} options={{ headerShown: false }} />
-      <Tab.Screen name="Box" component={MyBoxScreen} options={{ title: 'Boîte à livres' }} />
+      <Tab.Screen name="Box" component={UpdateStack} options={{ title: 'Boîte à livres', headerShown: false }} />
       <Tab.Screen
         name="Add"
         component={AddBoxScreen}
